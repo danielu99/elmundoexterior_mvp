@@ -32,15 +32,20 @@ function ProductForm({ onProductCreated }) {
         });
     };
 
-    const costo =
+    const costoCapturado =
         Number(form.costoUnitario) || 0;
 
     const margen =
         Number(form.margenDeseado) || 0;
 
+    const costoReal =
+        form.compraFacturada
+            ? costoCapturado / 1.16
+            : costoCapturado;
+
     const precioSugerido =
-        costo > 0 && margen < 100
-            ? costo / (1 - margen / 100)
+        costoReal > 0 && margen < 100
+            ? (costoReal / (1 - margen / 100)) * 1.16
             : 0;
 
     const handleSubmit = async (event) => {
@@ -143,9 +148,24 @@ function ProductForm({ onProductCreated }) {
                     />
 
                     <TextField
-                        label="Precio Sugerido"
+                        label={
+                            <>
+                                Precio Sugerido{" "}
+                                <span style={{ color: "gray" }}>
+                                    (IVA incluido)
+                                </span>
+                            </>
+                        }
                         value={precioSugerido.toFixed(2)}
                         disabled
+                        sx={{
+                            "& .MuiInputLabel-root.Mui-disabled": {
+                                color: "black"
+                            },
+                            "& .MuiInputLabel-root.Mui-disabled span": {
+                                color: "gray"
+                            }
+                        }}
                     />
 
                     <TextField
@@ -174,6 +194,21 @@ function ProductForm({ onProductCreated }) {
                         }
                         label="La compra tiene factura"
                     />
+
+                    {
+                        form.compraFacturada &&
+                        costoCapturado > 0 && (
+
+                            <Typography
+                                variant="caption"
+                                color="text.secondary"
+                            >
+                                Costo real sin IVA: $
+                                {costoReal.toFixed(2)}
+                            </Typography>
+
+                        )
+                    }
 
                     <Button
                         type="submit"
