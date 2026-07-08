@@ -1,6 +1,10 @@
 import { useState } from "react";
 
 import {
+    exportPendingInvoiceSalesCsv
+} from "../services/reportService";
+
+import {
     Paper,
     Typography,
     TextField,
@@ -78,7 +82,42 @@ function Reports() {
         setPending(summary);
 
         setPendingSales(sales);
-};
+
+    };
+
+    const downloadCsv = async () => {
+        try {
+            const blob =
+                await exportPendingInvoiceSalesCsv(
+                    year,
+                    month
+                );
+
+            const url =
+                window.URL.createObjectURL(
+                    blob
+                );
+
+            const link =
+                document.createElement("a");
+
+            link.href = url;
+
+            link.download =
+                `ventas_pendientes_${year}_${month}.csv`;
+
+            document.body.appendChild(
+                link
+            );
+
+            link.click();
+
+            link.remove();
+
+        } catch (error) {
+            console.error(error);
+        }
+    };
 
     return (
 
@@ -261,14 +300,27 @@ function Reports() {
 
                 </Typography>
 
-                <Button
-                    variant="contained"
-                    onClick={loadPending}
-                >
+                <Stack
+    direction="row"
+    spacing={2}
+    sx={{ mb: 2 }}
+>
 
-                    Generar
+    <Button
+        variant="contained"
+        onClick={loadPending}
+    >
+        Generar
+    </Button>
 
-                </Button>
+    <Button
+        variant="outlined"
+        onClick={downloadCsv}
+    >
+        Exportar CSV
+    </Button>
+
+</Stack>
 
                 {
                     pending && (

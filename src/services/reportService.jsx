@@ -73,3 +73,21 @@ export const getPendingInvoiceSales = async (
 
     return response.data;
 };
+
+export const exportPendingInvoiceSalesCsv =
+    async (year, month) => {
+
+        const response =
+            await axios.get(
+                `${API_URL}/reports/pending-invoice-sales/csv`,
+                {
+                    params: {
+                        year,
+                        month
+                    },
+                    responseType: "blob"
+             }
+        );
+
+        return response.data;
+};
