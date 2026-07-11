@@ -24,3 +24,14 @@ export const getSales = async () => {
 
     return response.data;
 };
+
+export const getSaleDetails =
+    async (saleId) => {
+
+    const response =
+        await axios.get(
+            `${API_URL}/${saleId}/details`
+        );
+
+    return response.data;
+};

@@ -12,7 +12,11 @@ import {
     TableCell,
     TableContainer,
     TableHead,
-    TableRow
+    TableRow,
+    Button,
+    Dialog,
+    DialogTitle,
+    DialogContent
 } from "@mui/material";
 
 import SaleForm
@@ -31,7 +35,8 @@ import {
 } from "../services/salesChannelService";
 
 import {
-    getSales
+    getSales,
+    getSaleDetails
 } from "../services/saleService";
 
 import {formatCurrency} from "../utils/formatters";
@@ -53,6 +58,18 @@ function Sales() {
     const [sales,
         setSales] =
         useState([]);
+
+    const [openDetail,
+        setOpenDetail] =
+        useState(false);
+
+    const [saleDetails,
+        setSaleDetails] =
+        useState([]);
+
+    const [selectedSaleId,
+        setSelectedSaleId] =
+        useState(null);
 
     const loadData =
         async () => {
@@ -98,6 +115,35 @@ function Sales() {
 
             }
         };
+
+    const handleViewDetail =
+    async (saleId) => {
+
+        try {
+
+            const data =
+                await getSaleDetails(
+                    saleId
+                );
+
+            setSaleDetails(
+                data
+            );
+
+            setSelectedSaleId(
+                saleId
+            );
+
+            setOpenDetail(
+                true
+            );
+
+        } catch (error) {
+
+            console.error(error);
+
+        }
+    };
 
     useEffect(() => {
 
@@ -175,6 +221,10 @@ function Sales() {
                                     Total
                                 </TableCell>
 
+                                <TableCell>
+    Acciones
+</TableCell>
+
                             </TableRow>
 
                         </TableHead>
@@ -238,6 +288,21 @@ function Sales() {
                                                     )
                                                 }
                                             </TableCell>
+                                            <TableCell>
+
+    <Button
+    size="small"
+    variant="outlined"
+    onClick={() =>
+        handleViewDetail(
+            sale.id
+        )
+    }
+>
+    Ver detalle
+</Button>
+
+</TableCell>
 
                                         </TableRow>
 
@@ -252,6 +317,102 @@ function Sales() {
                 </TableContainer>
 
             </Paper>
+            <Dialog
+    open={openDetail}
+    onClose={() =>
+        setOpenDetail(false)
+    }
+    maxWidth="md"
+    fullWidth
+>
+
+    <DialogTitle>
+
+        Venta #{selectedSaleId}
+
+    </DialogTitle>
+
+    <DialogContent>
+
+        <Table>
+
+            <TableHead>
+
+                <TableRow>
+
+                    <TableCell>
+                        Producto
+                    </TableCell>
+
+                    <TableCell align="right">
+                        Cantidad
+                    </TableCell>
+
+                    <TableCell align="right">
+                        Precio Unitario
+                    </TableCell>
+
+                    <TableCell align="right">
+                        Subtotal
+                    </TableCell>
+
+                </TableRow>
+
+            </TableHead>
+
+            <TableBody>
+
+                {
+                    saleDetails.map(
+                        detail => (
+
+                            <TableRow
+                                key={
+                                    detail.producto
+                                }
+                            >
+
+                                <TableCell>
+                                    {
+                                        detail.producto
+                                    }
+                                </TableCell>
+
+                                <TableCell align="right">
+                                    {
+                                        detail.cantidad
+                                    }
+                                </TableCell>
+
+                                <TableCell align="right">
+                                    {
+                                        formatCurrency(
+                                            detail.precioUnitario
+                                        )
+                                    }
+                                </TableCell>
+
+                                <TableCell align="right">
+                                    {
+                                        formatCurrency(
+                                            detail.subtotal
+                                        )
+                                    }
+                                </TableCell>
+
+                            </TableRow>
+
+                        )
+                    )
+                }
+
+            </TableBody>
+
+        </Table>
+
+    </DialogContent>
+
+</Dialog>
 
         </Container>
 
