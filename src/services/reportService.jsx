@@ -1,10 +1,10 @@
-import axios from "axios";
+import api from "./api";
 
 const API_URL = "http://localhost:8080";
 
 export const getDashboard = async () => {
 
-    const response = await axios.get(
+    const response = await api.get(
         `${API_URL}/reports/dashboard`
     );
 
@@ -13,7 +13,7 @@ export const getDashboard = async () => {
 
 export const getSalesSummary = async () => {
 
-    const response = await axios.get(
+    const response = await api.get(
         `${API_URL}/reports/sales-summary`
     );
 
@@ -25,7 +25,7 @@ export const getMonthlySales = async (
     month
 ) => {
 
-    const response = await axios.get(
+    const response = await api.get(
         `${API_URL}/reports/monthly-sales`,
         {
             params: {
@@ -43,7 +43,7 @@ export const getPendingInvoiceSummary = async (
     month
 ) => {
 
-    const response = await axios.get(
+    const response = await api.get(
         `${API_URL}/reports/pending-invoice-summary`,
         {
             params: {

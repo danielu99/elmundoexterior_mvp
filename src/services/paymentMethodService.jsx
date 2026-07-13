@@ -1,4 +1,4 @@
-import axios from "axios";
+import api from "./api";
 
 const API_URL =
     "http://localhost:8080/payment-methods";
@@ -7,7 +7,7 @@ export const getPaymentMethods =
     async () => {
 
         const response =
-            await axios.get(API_URL);
+            await api.get(API_URL);
 
         return response.data;
     };

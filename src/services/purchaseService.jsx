@@ -1,4 +1,4 @@
-import axios from "axios";
+import api from "./api";
 
 const API_URL =
     "http://localhost:8080/purchases";
@@ -7,7 +7,7 @@ export const createPurchase =
     async (purchase) => {
 
         const response =
-            await axios.post(
+            await api.post(
                 API_URL,
                 purchase
             );
@@ -19,7 +19,7 @@ export const getPurchases =
     async () => {
 
         const response =
-            await axios.get(
+            await api.get(
                 API_URL
             );
 

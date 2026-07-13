@@ -1,4 +1,4 @@
-import axios from "axios";
+import api from "./api";
 
 const API_URL =
     "http://localhost:8080/sales";
@@ -7,7 +7,7 @@ export const createSale =
     async (sale) => {
 
         const response =
-            await axios.post(
+            await api.post(
                 API_URL,
                 sale
             );
@@ -18,7 +18,7 @@ export const createSale =
 export const getSales = async () => {
 
     const response =
-        await axios.get(
+        await api.get(
             `${API_URL}`
         );
 
@@ -29,7 +29,7 @@ export const getSaleDetails =
     async (saleId) => {
 
     const response =
-        await axios.get(
+        await api.get(
             `${API_URL}/${saleId}/details`
         );
 
