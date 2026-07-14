@@ -1,7 +1,7 @@
 import api from "./api";
 
 const API_URL =
-    "http://localhost:8080/payment-methods";
+    "/payment-methods";
 
 export const getPaymentMethods =
     async () => {
