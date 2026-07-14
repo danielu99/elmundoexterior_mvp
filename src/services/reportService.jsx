@@ -61,7 +61,7 @@ export const getPendingInvoiceSales = async (
     month
 ) => {
 
-    const response = await axios.get(
+    const response = await api.get(
         `${API_URL}/reports/pending-invoice-sales`,
         {
             params: {
@@ -78,7 +78,7 @@ export const exportPendingInvoiceSalesCsv =
     async (year, month) => {
 
         const response =
-            await axios.get(
+            await api.get(
                 `${API_URL}/reports/pending-invoice-sales/csv`,
                 {
                     params: {
@@ -86,8 +86,22 @@ export const exportPendingInvoiceSalesCsv =
                         month
                     },
                     responseType: "blob"
-             }
-        );
+                }
+            );
 
         return response.data;
-};
+    };
+
+export const markAsInvoiced =
+    async (
+        year,
+        month
+    ) => {
+
+        const response =
+            await api.post(
+                `/reports/mark-invoiced?year=${year}&month=${month}`
+            );
+
+        return response.data;
+    };

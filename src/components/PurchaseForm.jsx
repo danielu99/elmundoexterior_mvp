@@ -118,22 +118,22 @@ function PurchaseForm({
                         {products.map(
                             product => (
 
-                            <MenuItem
-                                key={
-                                    product.id
-                                }
-                                value={
-                                    product.id
-                                }
-                            >
+                                <MenuItem
+                                    key={
+                                        product.id
+                                    }
+                                    value={
+                                        product.id
+                                    }
+                                >
 
-                                {
-                                    product.nombre
-                                }
+                                    {
+                                        product.nombre
+                                    }
 
-                            </MenuItem>
+                                </MenuItem>
 
-                        ))}
+                            ))}
 
                     </TextField>
 

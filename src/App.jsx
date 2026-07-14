@@ -5,8 +5,6 @@ import {
     Navigate
 } from "react-router-dom";
 
-import { useState } from "react";
-
 import Login from "./pages/Login";
 
 import SidebarLayout from "./layout/SidebarLayout";
@@ -17,97 +15,76 @@ import Purchases from "./pages/Purchases";
 import Sales from "./pages/Sales";
 import Reports from "./pages/Reports";
 
+import ProtectedRoute
+    from "./routes/ProtectedRoute";
+
 function App() {
-    const [isAuthenticated,
-    setIsAuthenticated] =
-    useState(
-        !!localStorage.getItem(
-            "authToken"
-        )
-    );
 
     return (
 
-    !isAuthenticated
+        <BrowserRouter>
 
-        ? (
+            <Routes>
 
-            <Login
-                onLogin={() =>
-                    setIsAuthenticated(
-                        true
-                    )
-                }
-            />
+                <Route
+                    path="/login"
+                    element={
+                        <Login />
+                    }
+                />
 
-        )
+                <Route
+                    element={
+                        <ProtectedRoute>
 
-        : (
-
-            <BrowserRouter>
-
-                <Routes>
-
-                    <Route
-                        element={
                             <SidebarLayout />
-                        }
-                    >
 
-                        <Route
-                            path="/dashboard"
-                            element={
-                                <Dashboard />
-                            }
-                        />
-
-                        <Route
-                            path="/products"
-                            element={
-                                <Products />
-                            }
-                        />
-
-                        <Route
-                            path="/purchases"
-                            element={
-                                <Purchases />
-                            }
-                        />
-
-                        <Route
-                            path="/sales"
-                            element={
-                                <Sales />
-                            }
-                        />
-
-                        <Route
-                            path="/reports"
-                            element={
-                                <Reports />
-                            }
-                        />
-
-                    </Route>
+                        </ProtectedRoute>
+                    }
+                >
 
                     <Route
-                        path="*"
-                        element={
-                            <Navigate
-                                to="/dashboard"
-                                replace
-                            />
-                        }
+                        path="/dashboard"
+                        element={<Dashboard />}
                     />
 
-                </Routes>
+                    <Route
+                        path="/products"
+                        element={<Products />}
+                    />
 
-            </BrowserRouter>
+                    <Route
+                        path="/purchases"
+                        element={<Purchases />}
+                    />
 
-        )
+                    <Route
+                        path="/sales"
+                        element={<Sales />}
+                    />
 
-);
+                    <Route
+                        path="/reports"
+                        element={<Reports />}
+                    />
+
+                </Route>
+
+                <Route
+                    path="*"
+                    element={
+                        <Navigate
+                            to="/dashboard"
+                            replace
+                        />
+                    }
+                />
+
+            </Routes>
+
+        </BrowserRouter>
+
+    );
 }
 
 export default App;

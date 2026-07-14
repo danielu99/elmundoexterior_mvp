@@ -1,10 +1,6 @@
 import { useState } from "react";
 
 import {
-    exportPendingInvoiceSalesCsv
-} from "../services/reportService";
-
-import {
     Paper,
     Typography,
     TextField,
@@ -23,7 +19,9 @@ import {
     getSalesSummary,
     getMonthlySales,
     getPendingInvoiceSummary,
-    getPendingInvoiceSales
+    getPendingInvoiceSales,
+    markAsInvoiced,
+    exportPendingInvoiceSalesCsv
 } from "../services/reportService";
 
 function Reports() {
@@ -118,6 +116,44 @@ function Reports() {
             console.error(error);
         }
     };
+
+    const handleMarkAsInvoiced =
+        async () => {
+
+            const confirmed =
+                window.confirm(
+                    `¿Marcar todas las ventas pendientes de ${month}/${year} como facturadas?`
+                );
+
+            if (!confirmed) {
+                return;
+            }
+
+            try {
+
+                const updated =
+                    await markAsInvoiced(
+                        year,
+                        month
+                    );
+
+                alert(
+                    `${updated} ventas marcadas como facturadas`
+                );
+
+                await loadPending();
+
+                await loadMonthly();
+
+            } catch (error) {
+
+                console.error(error);
+
+                alert(
+                    "Ocurrió un error"
+                );
+            }
+        };
 
     return (
 
@@ -301,26 +337,39 @@ function Reports() {
                 </Typography>
 
                 <Stack
-    direction="row"
-    spacing={2}
-    sx={{ mb: 2 }}
->
+                    direction="row"
+                    spacing={2}
+                    sx={{ mb: 2 }}
+                >
 
-    <Button
-        variant="contained"
-        onClick={loadPending}
-    >
-        Generar
-    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={loadPending}
+                    >
+                        Generar
+                    </Button>
 
-    <Button
-        variant="outlined"
-        onClick={downloadCsv}
-    >
-        Exportar CSV
-    </Button>
+                    <Button
+                        variant="outlined"
+                        onClick={downloadCsv}
+                        disabled={
+                            pendingSales.length === 0
+                        }
+                    >
+                        Exportar CSV
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="success"
+                        onClick={handleMarkAsInvoiced}
+                        disabled={
+                            pendingSales.length === 0
+                        }
+                    >
+                        Marcar Facturadas
+                    </Button>
 
-</Stack>
+                </Stack>
 
                 {
                     pending && (
@@ -359,122 +408,122 @@ function Reports() {
                     )
                 }
                 {
-                pendingSales.length > 0 && (
+                    pendingSales.length > 0 && (
 
-                    <TableContainer
-                        component={Paper}
-                        sx={{ mt: 3 }}
-                    >
+                        <TableContainer
+                            component={Paper}
+                            sx={{ mt: 3 }}
+                        >
 
-                        <Table>
+                            <Table>
 
-                            <TableHead>
+                                <TableHead>
 
-                                <TableRow>
+                                    <TableRow>
 
-                                    <TableCell>
-                                        Venta
-                                    </TableCell>
+                                        <TableCell>
+                                            Venta
+                                        </TableCell>
 
-                                    <TableCell>
-                                        Fecha
-                                    </TableCell>
+                                        <TableCell>
+                                            Fecha
+                                        </TableCell>
 
-                                    <TableCell>
-                                        Canal
-                                    </TableCell>
+                                        <TableCell>
+                                            Canal
+                                        </TableCell>
 
-                                    <TableCell>
-                                        Método Pago
-                                    </TableCell>
+                                        <TableCell>
+                                            Método Pago
+                                        </TableCell>
 
-                                    <TableCell align="right">
-                                        Subtotal
-                                    </TableCell>
+                                        <TableCell align="right">
+                                            Subtotal
+                                        </TableCell>
 
-                                    <TableCell align="right">
-                                        IVA
-                                    </TableCell>
+                                        <TableCell align="right">
+                                            IVA
+                                        </TableCell>
 
-                                    <TableCell align="right">
-                                        Total
-                                    </TableCell>
+                                        <TableCell align="right">
+                                            Total
+                                        </TableCell>
 
-                                </TableRow>
+                                    </TableRow>
 
-                            </TableHead>
+                                </TableHead>
 
-                            <TableBody>
+                                <TableBody>
 
-                                {
-                                    pendingSales.map(
-                                        (sale) => (
+                                    {
+                                        pendingSales.map(
+                                            (sale) => (
 
-                                            <TableRow
-                                                key={sale.ventaId}
-                                            >
+                                                <TableRow
+                                                    key={sale.ventaId}
+                                                >
 
-                                                <TableCell>
-                                                    #{sale.ventaId}
-                                                </TableCell>
+                                                    <TableCell>
+                                                        #{sale.ventaId}
+                                                    </TableCell>
 
-                                                <TableCell>
-                                                    {
-                                                        new Date(
-                                                            sale.fecha
-                                                        ).toLocaleDateString()
-                                                    }
-                                                </TableCell>
+                                                    <TableCell>
+                                                        {
+                                                            new Date(
+                                                                sale.fecha
+                                                            ).toLocaleDateString()
+                                                        }
+                                                    </TableCell>
 
-                                                <TableCell>
-                                                    {sale.canalVenta}
-                                                </TableCell>
+                                                    <TableCell>
+                                                        {sale.canalVenta}
+                                                    </TableCell>
 
-                                                <TableCell>
-                                                    {sale.metodoPago}
-                                                </TableCell>
+                                                    <TableCell>
+                                                        {sale.metodoPago}
+                                                    </TableCell>
 
-                                                <TableCell align="right">
-                                                    $
-                                                    {
-                                                        Number(
-                                                            sale.subtotal
-                                                        ).toFixed(2)
-                                                    }
-                                                </TableCell>
+                                                    <TableCell align="right">
+                                                        $
+                                                        {
+                                                            Number(
+                                                                sale.subtotal
+                                                            ).toFixed(2)
+                                                        }
+                                                    </TableCell>
 
-                                                <TableCell align="right">
-                                                    $
-                                                    {
-                                                        Number(
-                                                            sale.iva
-                                                        ).toFixed(2)
-                                                    }
-                                                </TableCell>
+                                                    <TableCell align="right">
+                                                        $
+                                                        {
+                                                            Number(
+                                                                sale.iva
+                                                            ).toFixed(2)
+                                                        }
+                                                    </TableCell>
 
-                                                <TableCell align="right">
-                                                    $
-                                                    {
-                                                        Number(
-                                                            sale.total
-                                                        ).toFixed(2)
-                                                    }
-                                                </TableCell>
+                                                    <TableCell align="right">
+                                                        $
+                                                        {
+                                                            Number(
+                                                                sale.total
+                                                            ).toFixed(2)
+                                                        }
+                                                    </TableCell>
 
-                                            </TableRow>
+                                                </TableRow>
 
+                                            )
                                         )
-                                    )
-                                }
+                                    }
 
-                            </TableBody>
+                                </TableBody>
 
-                        </Table>
+                            </Table>
 
-                    </TableContainer>
+                        </TableContainer>
 
-                )
-            }
+                    )
+                }
 
             </Paper>
 

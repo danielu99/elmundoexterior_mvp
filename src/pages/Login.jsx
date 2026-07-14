@@ -3,6 +3,10 @@ import {
 } from "react";
 
 import {
+    useNavigate
+} from "react-router-dom";
+
+import {
     Container,
     Paper,
     Typography,
@@ -14,9 +18,7 @@ import {
     login
 } from "../services/authService";
 
-function Login({
-    onLogin
-}) {
+function Login() {
 
     const [username,
         setUsername] =
@@ -29,6 +31,9 @@ function Login({
     const [error,
         setError] =
         useState("");
+
+    const navigate =
+        useNavigate();
 
     const handleSubmit =
         async (event) => {
@@ -47,9 +52,9 @@ function Login({
                     "authToken",
                     result.token
                 );
-
-                onLogin();
-
+                navigate(
+                    "/dashboard"
+                );
             } catch {
 
                 setError(

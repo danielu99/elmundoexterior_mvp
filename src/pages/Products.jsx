@@ -108,7 +108,7 @@ function Products() {
                                 </TableCell>
 
                                 <TableCell>
-                                    {product.margenDeseado*100}%
+                                    {product.margenDeseado * 100}%
                                 </TableCell>
 
                                 <TableCell>

@@ -1,10 +1,11 @@
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
 import AssessmentIcon from "@mui/icons-material/Assessment";
+import LogoutIcon from "@mui/icons-material/Logout";
 
 import {
     Box,
@@ -19,8 +20,25 @@ import {
 
 const drawerWidth = 240;
 
+
 function SidebarLayout() {
-    const location = useLocation();
+    const location =
+        useLocation();
+
+    const navigate =
+        useNavigate();
+        
+    const handleLogout =
+        () => {
+
+            localStorage.removeItem(
+                "authToken"
+            );
+
+            navigate(
+                "/login"
+            );
+        };
     return (
 
         <Box sx={{ display: "flex" }}>
@@ -179,6 +197,31 @@ function SidebarLayout() {
 
                             <ListItemText
                                 primary="Reportes"
+                            />
+
+
+                        </ListItemButton>
+
+                    </ListItem>
+                    <ListItem disablePadding>
+
+                        <ListItemButton
+                            onClick={
+                                handleLogout
+                            }
+                            sx={{
+                                borderRadius: 2,
+                                mx: 1,
+                                my: 0.5
+                            }}
+                        >
+
+                            <LogoutIcon
+                                sx={{ mr: 2 }}
+                            />
+
+                            <ListItemText
+                                primary="Cerrar sesión"
                             />
 
                         </ListItemButton>

@@ -190,16 +190,16 @@ function SaleForm({
                         {salesChannels.map(
                             channel => (
 
-                            <MenuItem
-                                key={channel.id}
-                                value={channel.id}
-                            >
+                                <MenuItem
+                                    key={channel.id}
+                                    value={channel.id}
+                                >
 
-                                {channel.nombre}
+                                    {channel.nombre}
 
-                            </MenuItem>
+                                </MenuItem>
 
-                        ))}
+                            ))}
 
                     </TextField>
 
@@ -221,16 +221,16 @@ function SaleForm({
                         {paymentMethods.map(
                             method => (
 
-                            <MenuItem
-                                key={method.id}
-                                value={method.id}
-                            >
+                                <MenuItem
+                                    key={method.id}
+                                    value={method.id}
+                                >
 
-                                {method.nombre}
+                                    {method.nombre}
 
-                            </MenuItem>
+                                </MenuItem>
 
-                        ))}
+                            ))}
 
                     </TextField>
 
@@ -273,16 +273,16 @@ function SaleForm({
                         {products.map(
                             product => (
 
-                            <MenuItem
-                                key={product.id}
-                                value={product.id}
-                            >
+                                <MenuItem
+                                    key={product.id}
+                                    value={product.id}
+                                >
 
-                                {product.nombre}
+                                    {product.nombre}
 
-                            </MenuItem>
+                                </MenuItem>
 
-                        ))}
+                            ))}
 
                     </TextField>
 

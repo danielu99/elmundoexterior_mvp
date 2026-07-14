@@ -39,7 +39,7 @@ import {
     getSaleDetails
 } from "../services/saleService";
 
-import {formatCurrency} from "../utils/formatters";
+import { formatCurrency } from "../utils/formatters";
 
 function Sales() {
 
@@ -88,7 +88,7 @@ function Sales() {
                     getPaymentMethods(),
 
                     getSalesChannels(),
-                    
+
                     getSales()
 
                 ]);
@@ -117,33 +117,33 @@ function Sales() {
         };
 
     const handleViewDetail =
-    async (saleId) => {
+        async (saleId) => {
 
-        try {
+            try {
 
-            const data =
-                await getSaleDetails(
+                const data =
+                    await getSaleDetails(
+                        saleId
+                    );
+
+                setSaleDetails(
+                    data
+                );
+
+                setSelectedSaleId(
                     saleId
                 );
 
-            setSaleDetails(
-                data
-            );
+                setOpenDetail(
+                    true
+                );
 
-            setSelectedSaleId(
-                saleId
-            );
+            } catch (error) {
 
-            setOpenDetail(
-                true
-            );
+                console.error(error);
 
-        } catch (error) {
-
-            console.error(error);
-
-        }
-    };
+            }
+        };
 
     useEffect(() => {
 
@@ -222,8 +222,8 @@ function Sales() {
                                 </TableCell>
 
                                 <TableCell>
-    Acciones
-</TableCell>
+                                    Acciones
+                                </TableCell>
 
                             </TableRow>
 
@@ -233,42 +233,161 @@ function Sales() {
 
                             {
                                 [...sales]
-                                .sort(
-                                    (a, b) =>
-                                        new Date(b.fecha) -
-                                        new Date(a.fecha)
-                                )
-                                .map(
-                                    (sale) => (
+                                    .sort(
+                                        (a, b) =>
+                                            new Date(b.fecha) -
+                                            new Date(a.fecha)
+                                    )
+                                    .map(
+                                        (sale) => (
+
+                                            <TableRow
+                                                key={sale.id}
+                                            >
+
+                                                <TableCell>
+                                                    #{sale.id}
+                                                </TableCell>
+
+                                                <TableCell>
+                                                    {
+                                                        new Date(
+                                                            sale.fecha
+                                                        ).toLocaleDateString()
+                                                    }
+                                                </TableCell>
+
+                                                <TableCell>
+                                                    {
+                                                        sale.facturada
+                                                            ? "Sí"
+                                                            : "No"
+                                                    }
+                                                </TableCell>
+
+                                                <TableCell align="right">
+                                                    {
+                                                        formatCurrency(
+                                                            sale.subtotal
+                                                        )
+                                                    }
+                                                </TableCell>
+
+                                                <TableCell align="right">
+                                                    {
+                                                        formatCurrency(
+                                                            sale.iva
+                                                        )
+                                                    }
+                                                </TableCell>
+
+                                                <TableCell align="right">
+                                                    {
+                                                        formatCurrency(
+                                                            sale.total
+                                                        )
+                                                    }
+                                                </TableCell>
+                                                <TableCell>
+
+                                                    <Button
+                                                        size="small"
+                                                        variant="outlined"
+                                                        onClick={() =>
+                                                            handleViewDetail(
+                                                                sale.id
+                                                            )
+                                                        }
+                                                    >
+                                                        Ver detalle
+                                                    </Button>
+
+                                                </TableCell>
+
+                                            </TableRow>
+
+                                        )
+                                    )
+                            }
+
+                        </TableBody>
+
+                    </Table>
+
+                </TableContainer>
+
+            </Paper>
+            <Dialog
+                open={openDetail}
+                onClose={() =>
+                    setOpenDetail(false)
+                }
+                maxWidth="md"
+                fullWidth
+            >
+
+                <DialogTitle>
+
+                    Venta #{selectedSaleId}
+
+                </DialogTitle>
+
+                <DialogContent>
+
+                    <Table>
+
+                        <TableHead>
+
+                            <TableRow>
+
+                                <TableCell>
+                                    Producto
+                                </TableCell>
+
+                                <TableCell align="right">
+                                    Cantidad
+                                </TableCell>
+
+                                <TableCell align="right">
+                                    Precio Unitario
+                                </TableCell>
+
+                                <TableCell align="right">
+                                    Subtotal
+                                </TableCell>
+
+                            </TableRow>
+
+                        </TableHead>
+
+                        <TableBody>
+
+                            {
+                                saleDetails.map(
+                                    detail => (
 
                                         <TableRow
-                                            key={sale.id}
+                                            key={
+                                                detail.producto
+                                            }
                                         >
 
                                             <TableCell>
-                                                #{sale.id}
-                                            </TableCell>
-
-                                            <TableCell>
                                                 {
-                                                    new Date(
-                                                        sale.fecha
-                                                    ).toLocaleDateString()
+                                                    detail.producto
                                                 }
                                             </TableCell>
 
-                                            <TableCell>
+                                            <TableCell align="right">
                                                 {
-                                                    sale.facturada
-                                                        ? "Sí"
-                                                        : "No"
+                                                    detail.cantidad
                                                 }
                                             </TableCell>
 
                                             <TableCell align="right">
                                                 {
                                                     formatCurrency(
-                                                        sale.subtotal
+                                                        detail.precioUnitario
                                                     )
                                                 }
                                             </TableCell>
@@ -276,33 +395,10 @@ function Sales() {
                                             <TableCell align="right">
                                                 {
                                                     formatCurrency(
-                                                        sale.iva
+                                                        detail.subtotal
                                                     )
                                                 }
                                             </TableCell>
-
-                                            <TableCell align="right">
-                                                {
-                                                    formatCurrency(
-                                                        sale.total
-                                                    )
-                                                }
-                                            </TableCell>
-                                            <TableCell>
-
-    <Button
-    size="small"
-    variant="outlined"
-    onClick={() =>
-        handleViewDetail(
-            sale.id
-        )
-    }
->
-    Ver detalle
-</Button>
-
-</TableCell>
 
                                         </TableRow>
 
@@ -314,105 +410,9 @@ function Sales() {
 
                     </Table>
 
-                </TableContainer>
+                </DialogContent>
 
-            </Paper>
-            <Dialog
-    open={openDetail}
-    onClose={() =>
-        setOpenDetail(false)
-    }
-    maxWidth="md"
-    fullWidth
->
-
-    <DialogTitle>
-
-        Venta #{selectedSaleId}
-
-    </DialogTitle>
-
-    <DialogContent>
-
-        <Table>
-
-            <TableHead>
-
-                <TableRow>
-
-                    <TableCell>
-                        Producto
-                    </TableCell>
-
-                    <TableCell align="right">
-                        Cantidad
-                    </TableCell>
-
-                    <TableCell align="right">
-                        Precio Unitario
-                    </TableCell>
-
-                    <TableCell align="right">
-                        Subtotal
-                    </TableCell>
-
-                </TableRow>
-
-            </TableHead>
-
-            <TableBody>
-
-                {
-                    saleDetails.map(
-                        detail => (
-
-                            <TableRow
-                                key={
-                                    detail.producto
-                                }
-                            >
-
-                                <TableCell>
-                                    {
-                                        detail.producto
-                                    }
-                                </TableCell>
-
-                                <TableCell align="right">
-                                    {
-                                        detail.cantidad
-                                    }
-                                </TableCell>
-
-                                <TableCell align="right">
-                                    {
-                                        formatCurrency(
-                                            detail.precioUnitario
-                                        )
-                                    }
-                                </TableCell>
-
-                                <TableCell align="right">
-                                    {
-                                        formatCurrency(
-                                            detail.subtotal
-                                        )
-                                    }
-                                </TableCell>
-
-                            </TableRow>
-
-                        )
-                    )
-                }
-
-            </TableBody>
-
-        </Table>
-
-    </DialogContent>
-
-</Dialog>
+            </Dialog>
 
         </Container>
 

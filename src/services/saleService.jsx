@@ -13,7 +13,7 @@ export const createSale =
             );
 
         return response.data;
-};
+    };
 
 export const getSales = async () => {
 
@@ -28,10 +28,10 @@ export const getSales = async () => {
 export const getSaleDetails =
     async (saleId) => {
 
-    const response =
-        await api.get(
-            `${API_URL}/${saleId}/details`
-        );
+        const response =
+            await api.get(
+                `${API_URL}/${saleId}/details`
+            );
 
-    return response.data;
-};
+        return response.data;
+    };
