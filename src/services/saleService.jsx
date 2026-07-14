@@ -1,7 +1,7 @@
 import api from "./api";
 
 const API_URL =
-    "http://localhost:8080/sales";
+    "/sales";
 
 export const createSale =
     async (sale) => {

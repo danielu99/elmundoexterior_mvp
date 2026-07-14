@@ -13,7 +13,7 @@ export const login =
 
         const response =
             await api.get(
-                "http://localhost:8080/products",
+                "/products",
                 {
                     headers: {
                         Authorization:

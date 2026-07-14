@@ -1,11 +1,9 @@
 import api from "./api";
 
-const API_URL = "http://localhost:8080";
-
 export const getDashboard = async () => {
 
     const response = await api.get(
-        `${API_URL}/reports/dashboard`
+        `/reports/dashboard`
     );
 
     return response.data;
@@ -14,7 +12,7 @@ export const getDashboard = async () => {
 export const getSalesSummary = async () => {
 
     const response = await api.get(
-        `${API_URL}/reports/sales-summary`
+        `/reports/sales-summary`
     );
 
     return response.data;
@@ -26,7 +24,7 @@ export const getMonthlySales = async (
 ) => {
 
     const response = await api.get(
-        `${API_URL}/reports/monthly-sales`,
+        `/reports/monthly-sales`,
         {
             params: {
                 year,
@@ -44,7 +42,7 @@ export const getPendingInvoiceSummary = async (
 ) => {
 
     const response = await api.get(
-        `${API_URL}/reports/pending-invoice-summary`,
+        `/reports/pending-invoice-summary`,
         {
             params: {
                 year,
@@ -62,7 +60,7 @@ export const getPendingInvoiceSales = async (
 ) => {
 
     const response = await api.get(
-        `${API_URL}/reports/pending-invoice-sales`,
+        `/reports/pending-invoice-sales`,
         {
             params: {
                 year,
@@ -79,7 +77,7 @@ export const exportPendingInvoiceSalesCsv =
 
         const response =
             await api.get(
-                `${API_URL}/reports/pending-invoice-sales/csv`,
+                `/reports/pending-invoice-sales/csv`,
                 {
                     params: {
                         year,

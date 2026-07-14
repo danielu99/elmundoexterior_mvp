@@ -1,6 +1,6 @@
 import api from "./api";
 
-const API_URL = "http://localhost:8080/products";
+const API_URL = "/products";
 
 export const getProducts = async () => {
 
