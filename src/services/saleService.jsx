@@ -35,3 +35,23 @@ export const getSaleDetails =
 
         return response.data;
     };
+
+export const getSalesByDateRange =
+    async (
+        from,
+        to
+    ) => {
+
+        const response =
+            await api.get(
+                `${API_URL}/history`,
+                {
+                    params: {
+                        from,
+                        to
+                    }
+                }
+            );
+
+        return response.data;
+    };

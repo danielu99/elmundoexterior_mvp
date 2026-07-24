@@ -16,6 +16,9 @@ import {
     TableRow
 } from "@mui/material";
 
+import DeleteIcon
+    from "@mui/icons-material/Delete";
+
 import { createSale } from "../services/saleService";
 
 function SaleForm({
@@ -93,6 +96,33 @@ function SaleForm({
             precioUnitario: ""
         });
     };
+
+    const removeItem =
+        (index) => {
+
+            setItems(
+                items.filter(
+                    (_, i) =>
+                        i !== index
+                )
+            );
+        };
+
+    const clearSale =
+        () => {
+
+            const confirmed =
+                window.confirm(
+                    "¿Deseas eliminar todos los productos de la venta?"
+                );
+
+            if (!confirmed) {
+                return;
+            }
+
+            setItems([]);
+
+        };
 
     const total =
         items.reduce(
@@ -362,62 +392,125 @@ function SaleForm({
                                     Precio
                                 </TableCell>
 
+                                <TableCell>
+                                    Acciones
+                                </TableCell>
+
                             </TableRow>
 
                         </TableHead>
 
                         <TableBody>
 
-                            {items.map(
-                                (
-                                    item,
-                                    index
-                                ) => {
+                            {
+                                items.length === 0
 
-                                    const product =
-                                        products.find(
-                                            p =>
-                                                p.id ===
-                                                item.productId
-                                        );
+                                    ? (
 
-                                    return (
+                                        <TableRow>
 
-                                        <TableRow
-                                            key={
-                                                index
-                                            }
-                                        >
+                                            <TableCell
+                                                colSpan={4}
+                                                align="center"
+                                                sx={{
+                                                    py: 6
+                                                }}
+                                            >
 
-                                            <TableCell>
+                                                <Typography
+                                                    variant="body1"
+                                                    color="text.secondary"
+                                                >
 
-                                                {
-                                                    product?.nombre
-                                                }
+                                                    Aún no hay productos agregados
+                                                    a la venta
 
-                                            </TableCell>
-
-                                            <TableCell>
-
-                                                {
-                                                    item.cantidad
-                                                }
-
-                                            </TableCell>
-
-                                            <TableCell>
-
-                                                {
-                                                    item.precioUnitario
-                                                }
+                                                </Typography>
 
                                             </TableCell>
 
                                         </TableRow>
 
-                                    );
-                                }
-                            )}
+                                    )
+
+                                    : (
+
+                                        items.map(
+                                            (
+                                                item,
+                                                index
+                                            ) => {
+
+                                                const product =
+                                                    products.find(
+                                                        p =>
+                                                            p.id ===
+                                                            item.productId
+                                                    );
+
+                                                return (
+
+                                                    <TableRow
+                                                        key={
+                                                            index
+                                                        }
+                                                    >
+
+                                                        <TableCell>
+
+                                                            {
+                                                                product?.nombre
+                                                            }
+
+                                                        </TableCell>
+
+                                                        <TableCell>
+
+                                                            {
+                                                                item.cantidad
+                                                            }
+
+                                                        </TableCell>
+
+                                                        <TableCell>
+
+                                                            {
+                                                                new Intl.NumberFormat(
+                                                                    "es-MX",
+                                                                    {
+                                                                        style: "currency",
+                                                                        currency: "MXN"
+                                                                    }
+                                                                ).format(
+                                                                    item.precioUnitario
+                                                                )
+                                                            }
+
+                                                        </TableCell>
+                                                        <TableCell>
+
+                                                            <Button
+                                                                color="error"
+                                                                size="small"
+                                                                onClick={() =>
+                                                                    removeItem(index)
+                                                                }
+                                                            >
+
+                                                                <DeleteIcon />
+
+                                                            </Button>
+
+                                                        </TableCell>
+
+                                                    </TableRow>
+
+                                                );
+                                            }
+                                        )
+
+                                    )
+                            }
 
                         </TableBody>
 
@@ -446,6 +539,16 @@ function SaleForm({
                         ${total.toFixed(2)}
 
                     </Typography>
+
+                    <Button
+                        variant="outlined"
+                        color="warning"
+                        onClick={clearSale}
+                    >
+
+                        Limpiar Venta
+
+                    </Button>
 
                     <Button
                         type="submit"

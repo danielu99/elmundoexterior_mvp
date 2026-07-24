@@ -16,8 +16,29 @@ import {
     Button,
     Dialog,
     DialogTitle,
-    DialogContent
+    DialogContent,
+    Box,
+    Chip
 } from "@mui/material";
+
+import Tabs from "@mui/material/Tabs";
+import Tab from "@mui/material/Tab";
+
+import dayjs from "dayjs";
+import "dayjs/locale/es";
+
+import {
+    LocalizationProvider
+} from "@mui/x-date-pickers";
+
+import {
+    AdapterDayjs
+} from "@mui/x-date-pickers/AdapterDayjs";
+
+import {
+    DatePicker
+} from "@mui/x-date-pickers/DatePicker";
+
 
 import SaleForm
     from "../components/SaleForm";
@@ -36,7 +57,8 @@ import {
 
 import {
     getSales,
-    getSaleDetails
+    getSaleDetails,
+    getSalesByDateRange
 } from "../services/saleService";
 
 import { formatCurrency } from "../utils/formatters";
@@ -71,6 +93,23 @@ function Sales() {
         setSelectedSaleId] =
         useState(null);
 
+    const [tab,
+        setTab] =
+        useState(0);
+
+    const [fromDate,
+        setFromDate] =
+        useState(
+            dayjs()
+                .startOf("month")
+        );
+
+    const [toDate,
+        setToDate] =
+        useState(
+            dayjs()
+        );
+
     const loadData =
         async () => {
 
@@ -89,8 +128,6 @@ function Sales() {
 
                     getSalesChannels(),
 
-                    getSales()
-
                 ]);
 
                 setProducts(
@@ -105,9 +142,29 @@ function Sales() {
                     salesChannelsData
                 );
 
-                setSales(
-                    salesData
-                );
+            } catch (error) {
+
+                console.error(error);
+
+            }
+        };
+
+    const searchSales =
+        async () => {
+
+            try {
+
+                const data =
+                    await getSalesByDateRange(
+                        fromDate.format(
+                            "YYYY-MM-DD"
+                        ),
+                        toDate.format(
+                            "YYYY-MM-DD"
+                        )
+                    );
+
+                setSales(data);
 
             } catch (error) {
 
@@ -151,6 +208,19 @@ function Sales() {
 
     }, []);
 
+    useEffect(
+        () => {
+
+            if (tab === 1) {
+
+                searchSales();
+
+            }
+
+        },
+        [tab]
+    );
+
     return (
 
         <Container
@@ -164,159 +234,275 @@ function Sales() {
 
             </Typography>
 
-            <SaleForm
-                products={
-                    products
+            <Tabs
+                value={tab}
+                onChange={(event, value) =>
+                    setTab(value)
                 }
-                paymentMethods={
-                    paymentMethods
-                }
-                salesChannels={
-                    salesChannels
-                }
-                onSaleCreated={
-                    loadData
-                }
-            />
-            <Paper sx={{ mt: 4 }}>
+                sx={{ mb: 3 }}
+            >
 
-                <Typography
-                    variant="h6"
-                    sx={{ p: 2 }}
-                >
+                <Tab
+                    label="Nueva Venta"
+                />
 
-                    Ventas Registradas
+                <Tab
+                    label="Historial"
+                />
 
-                </Typography>
+            </Tabs>
 
-                <TableContainer>
+            {
+                tab === 0 && (
 
-                    <Table>
+                    <SaleForm
+                        products={products}
+                        paymentMethods={paymentMethods}
+                        salesChannels={salesChannels}
+                        onSaleCreated={loadData}
+                    />
 
-                        <TableHead>
+                )
+            }
 
-                            <TableRow>
+            {
+                tab === 1 && (
 
-                                <TableCell>
-                                    ID
-                                </TableCell>
+                    <LocalizationProvider
+                        dateAdapter={AdapterDayjs}
+                        adapterLocale="es"
+                    >
 
-                                <TableCell>
-                                    Fecha
-                                </TableCell>
+                        <Box
+                            sx={{
+                                display: "flex",
+                                gap: 2,
+                                mb: 2
+                            }}
+                        >
 
-                                <TableCell>
-                                    Facturada
-                                </TableCell>
+                            <DatePicker
+                                label="Desde"
+                                value={fromDate}
+                                onChange={setFromDate}
+                            />
 
-                                <TableCell align="right">
-                                    Subtotal
-                                </TableCell>
+                            <DatePicker
+                                label="Hasta"
+                                value={toDate}
+                                onChange={setToDate}
+                            />
 
-                                <TableCell align="right">
-                                    IVA
-                                </TableCell>
+                            <Button
+                                variant="contained"
+                                onClick={
+                                    searchSales
+                                }
+                            >
+                                Buscar
+                            </Button>
 
-                                <TableCell align="right">
-                                    Total
-                                </TableCell>
+                        </Box>
 
-                                <TableCell>
-                                    Acciones
-                                </TableCell>
 
-                            </TableRow>
+                        <Paper sx={{ mt: 2 }}>
 
-                        </TableHead>
+                            <Typography
+                                variant="h6"
+                                sx={{ p: 2 }}
+                            >
 
-                        <TableBody>
+                                Ventas Registradas
 
-                            {
-                                [...sales]
-                                    .sort(
-                                        (a, b) =>
-                                            new Date(b.fecha) -
-                                            new Date(a.fecha)
-                                    )
-                                    .map(
-                                        (sale) => (
+                            </Typography>
+                            <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                sx={{
+                                    px: 2,
+                                    pb: 1
+                                }}
+                            >
 
-                                            <TableRow
-                                                key={sale.id}
-                                            >
+                                Mostrando {sales.length} venta(s)
 
-                                                <TableCell>
-                                                    #{sale.id}
-                                                </TableCell>
+                            </Typography>
+                            <TableContainer>
 
-                                                <TableCell>
-                                                    {
-                                                        new Date(
-                                                            sale.fecha
-                                                        ).toLocaleDateString()
-                                                    }
-                                                </TableCell>
+                                <Table>
 
-                                                <TableCell>
-                                                    {
-                                                        sale.facturada
-                                                            ? "Sí"
-                                                            : "No"
-                                                    }
-                                                </TableCell>
+                                    <TableHead>
 
-                                                <TableCell align="right">
-                                                    {
-                                                        formatCurrency(
-                                                            sale.subtotal
+                                        <TableRow>
+
+                                            <TableCell>
+                                                ID
+                                            </TableCell>
+
+                                            <TableCell>
+                                                Fecha
+                                            </TableCell>
+
+                                            <TableCell>
+                                                Facturada
+                                            </TableCell>
+
+                                            <TableCell align="right">
+                                                Subtotal
+                                            </TableCell>
+
+                                            <TableCell align="right">
+                                                IVA
+                                            </TableCell>
+
+                                            <TableCell align="right">
+                                                Total
+                                            </TableCell>
+
+                                            <TableCell>
+                                                Acciones
+                                            </TableCell>
+
+                                        </TableRow>
+
+                                    </TableHead>
+
+                                    <TableBody>
+
+                                        {
+                                            sales.length === 0
+
+                                                ? (
+
+                                                    <TableRow>
+
+                                                        <TableCell
+                                                            colSpan={7}
+                                                            align="center"
+                                                            sx={{
+                                                                py: 6
+                                                            }}
+                                                        >
+
+                                                            <Typography
+                                                                variant="body1"
+                                                                color="text.secondary"
+                                                            >
+
+                                                                No se encontraron ventas
+                                                                para el rango seleccionado
+
+                                                            </Typography>
+
+                                                        </TableCell>
+
+                                                    </TableRow>
+
+                                                )
+
+                                                : (
+
+                                                    [...sales]
+                                                        .sort(
+                                                            (a, b) =>
+                                                                new Date(b.fecha) -
+                                                                new Date(a.fecha)
                                                         )
-                                                    }
-                                                </TableCell>
+                                                        .map(
+                                                            (sale) => (
 
-                                                <TableCell align="right">
-                                                    {
-                                                        formatCurrency(
-                                                            sale.iva
-                                                        )
-                                                    }
-                                                </TableCell>
+                                                                <TableRow
+                                                                    key={sale.id}
+                                                                >
 
-                                                <TableCell align="right">
-                                                    {
-                                                        formatCurrency(
-                                                            sale.total
-                                                        )
-                                                    }
-                                                </TableCell>
-                                                <TableCell>
+                                                                    <TableCell>
+                                                                        #{sale.id}
+                                                                    </TableCell>
 
-                                                    <Button
-                                                        size="small"
-                                                        variant="outlined"
-                                                        onClick={() =>
-                                                            handleViewDetail(
-                                                                sale.id
+                                                                    <TableCell>
+                                                                        {
+                                                                            new Date(
+                                                                                sale.fecha
+                                                                            ).toLocaleDateString()
+                                                                        }
+                                                                    </TableCell>
+
+                                                                    <TableCell>
+                                                                        {
+                                                                            sale.facturada
+                                                                                ? <Chip
+                                                                                    label="Facturada"
+                                                                                    color="success"
+                                                                                    size="small"
+                                                                                />
+                                                                                : <Chip
+                                                                                    label="Pendiente"
+                                                                                    color="warning"
+                                                                                    size="small"
+                                                                                />
+                                                                        }
+                                                                    </TableCell>
+
+                                                                    <TableCell align="right">
+                                                                        {
+                                                                            formatCurrency(
+                                                                                sale.subtotal
+                                                                            )
+                                                                        }
+                                                                    </TableCell>
+
+                                                                    <TableCell align="right">
+                                                                        {
+                                                                            formatCurrency(
+                                                                                sale.iva
+                                                                            )
+                                                                        }
+                                                                    </TableCell>
+
+                                                                    <TableCell align="right">
+                                                                        {
+                                                                            formatCurrency(
+                                                                                sale.total
+                                                                            )
+                                                                        }
+                                                                    </TableCell>
+
+                                                                    <TableCell>
+
+                                                                        <Button
+                                                                            size="small"
+                                                                            variant="outlined"
+                                                                            onClick={() =>
+                                                                                handleViewDetail(
+                                                                                    sale.id
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            Ver detalle
+                                                                        </Button>
+
+                                                                    </TableCell>
+
+                                                                </TableRow>
+
                                                             )
-                                                        }
-                                                    >
-                                                        Ver detalle
-                                                    </Button>
+                                                        )
 
-                                                </TableCell>
+                                                )
+                                        }
 
-                                            </TableRow>
+                                    </TableBody>
 
-                                        )
-                                    )
-                            }
+                                </Table>
 
-                        </TableBody>
+                            </TableContainer>
 
-                    </Table>
+                        </Paper>
+                    </LocalizationProvider>
 
-                </TableContainer>
 
-            </Paper>
+                )
+            }
             <Dialog
                 open={openDetail}
                 onClose={() =>
