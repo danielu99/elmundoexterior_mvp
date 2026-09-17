@@ -1,0 +1,12 @@
+import api from "./api";
+
+export const getExpenseTypes =
+    async () => {
+
+        const response =
+            await api.get(
+                "/expense-types"
+            );
+
+        return response.data;
+    };
