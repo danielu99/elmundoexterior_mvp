@@ -18,6 +18,9 @@ import {
     login
 } from "../services/authService";
 
+import LoadingOverlay
+    from "../components/LoadingOverlay";
+
 function Login() {
 
     const [username,
@@ -32,6 +35,10 @@ function Login() {
         setError] =
         useState("");
 
+    const [loading,
+        setLoading] =
+        useState(false);
+
     const navigate =
         useNavigate();
 
@@ -39,6 +46,9 @@ function Login() {
         async (event) => {
 
             event.preventDefault();
+
+            setError("");
+            setLoading(true);
 
             try {
 
@@ -52,14 +62,20 @@ function Login() {
                     "authToken",
                     result.token
                 );
+
                 navigate(
                     "/dashboard"
                 );
+
             } catch {
 
                 setError(
                     "Usuario o contraseña incorrectos"
                 );
+
+            } finally {
+
+                setLoading(false);
 
             }
         };
@@ -133,6 +149,7 @@ function Login() {
                         sx={{ mt: 2 }}
                         type="submit"
                         variant="contained"
+                        disabled={loading}
                     >
 
                         Entrar
@@ -142,6 +159,10 @@ function Login() {
                 </form>
 
             </Paper>
+            <LoadingOverlay
+                open={loading}
+                message="Preparando El Mundo Exterior..."
+            />
 
         </Container>
 
