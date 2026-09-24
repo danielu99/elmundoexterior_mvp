@@ -1,23 +1,41 @@
-import { useState } from "react";
+import {
+    useState,
+    useEffect
+} from "react";
+
+import dayjs from "dayjs";
+import "dayjs/locale/es";
 
 import {
-    Paper,
+    Grid,
     Typography,
-    TextField,
-    Button,
     Stack,
+    Paper,
     Divider,
     Table,
     TableBody,
     TableCell,
     TableContainer,
     TableHead,
-    TableRow
+    TableRow,
+    Button,
+    Chip
 } from "@mui/material";
 
 import {
+    LocalizationProvider
+} from "@mui/x-date-pickers";
+
+import {
+    AdapterDayjs
+} from "@mui/x-date-pickers/AdapterDayjs";
+
+import {
+    DatePicker
+} from "@mui/x-date-pickers/DatePicker";
+
+import {
     getSalesSummary,
-    getMonthlySales,
     getPendingInvoiceSummary,
     getPendingInvoiceSales,
     markAsInvoiced,
@@ -29,66 +47,105 @@ function Reports() {
     const [summary, setSummary] =
         useState(null);
 
-    const [monthly, setMonthly] =
-        useState(null);
-
     const [pending, setPending] =
         useState(null);
-
-    const [month, setMonth] =
-        useState(new Date().getMonth() + 1);
-
-    const [year, setYear] =
-        useState(new Date().getFullYear());
 
     const [pendingSales, setPendingSales] =
         useState([]);
 
+    const [selectedDate,
+        setSelectedDate] =
+        useState(dayjs());
+
+    const formatMoney = (amount) =>
+        new Intl.NumberFormat(
+            "es-MX",
+            {
+                style: "currency",
+                currency: "MXN"
+            }
+        ).format(amount ?? 0);
+
+    const Metric = ({
+        label,
+        value,
+        emphasis = false
+    }) => (
+
+        <Stack spacing={0.5}>
+
+            <Typography
+                variant="body2"
+                color="text.secondary"
+            >
+                {label}
+            </Typography>
+
+            <Typography
+                variant={emphasis ? "h5" : "h6"}
+                fontWeight={emphasis ? 700 : 500}
+            >
+                {value}
+            </Typography>
+
+        </Stack>
+
+    );
+
     const loadSummary = async () => {
 
-        const data =
-            await getSalesSummary();
+        try {
 
-        setSummary(data);
+            const data =
+                await getSalesSummary();
+
+            setSummary(data);
+
+        } catch (error) {
+
+            console.error(error);
+        }
     };
 
-    const loadMonthly = async () => {
+    const loadPending = async (date = selectedDate) => {
 
-        const data =
-            await getMonthlySales(
-                year,
-                month
-            );
+        try {
 
-        setMonthly(data);
-    };
+            const [
+                summaryData,
+                salesData
+            ] = await Promise.all([
 
-    const loadPending = async () => {
+                getPendingInvoiceSummary(
+                    date.year(),
+                    date.month() + 1
+                ),
 
-        const summary =
-            await getPendingInvoiceSummary(
-                year,
-                month
-            );
+                getPendingInvoiceSales(
+                    date.year(),
+                    date.month() + 1
+                )
 
-        const sales =
-            await getPendingInvoiceSales(
-                year,
-                month
-            );
+            ]);
 
-        setPending(summary);
+            setPending(summaryData);
 
-        setPendingSales(sales);
+            setPendingSales(salesData);
 
+        } catch (error) {
+
+            console.error(error);
+        }
     };
 
     const downloadCsv = async () => {
+
         try {
+
             const blob =
                 await exportPendingInvoiceSalesCsv(
-                    year,
-                    month
+                    selectedDate.year(),
+                    selectedDate.month() + 1
                 );
 
             const url =
@@ -102,7 +159,7 @@ function Reports() {
             link.href = url;
 
             link.download =
-                `ventas_pendientes_${year}_${month}.csv`;
+                `ventas_pendientes_${selectedDate.year()}_${selectedDate.month() + 1}.csv`;
 
             document.body.appendChild(
                 link
@@ -112,13 +169,24 @@ function Reports() {
 
             link.remove();
 
+            window.URL.revokeObjectURL(
+                url
+            );
+
         } catch (error) {
+
             console.error(error);
         }
     };
 
     const handleMarkAsInvoiced =
         async () => {
+
+            const month =
+                selectedDate.month() + 1;
+
+            const year =
+                selectedDate.year();
 
             const confirmed =
                 window.confirm(
@@ -141,9 +209,10 @@ function Reports() {
                     `${updated} ventas marcadas como facturadas`
                 );
 
-                await loadPending();
-
-                await loadMonthly();
+                await Promise.all([
+                    loadPending(),
+                    loadSummary()
+                ]);
 
             } catch (error) {
 
@@ -155,265 +224,408 @@ function Reports() {
             }
         };
 
+    useEffect(() => {
+
+        loadSummary();
+
+    }, []);
+
+    useEffect(() => {
+
+        loadPending(
+            selectedDate
+        );
+
+    }, [selectedDate]);
+
     return (
 
         <Stack spacing={3}>
 
             <Typography variant="h4">
-
                 Reportes
-
             </Typography>
 
-            <Paper sx={{ p: 3 }}>
+            {/* RESUMEN GENERAL */}
+
+            <Paper
+                sx={{
+                    p: 3
+                }}
+            >
 
                 <Typography
                     variant="h6"
-                    gutterBottom>
-
-                    Resumen General
-
-                </Typography>
-
-                <Button
-                    variant="contained"
-                    onClick={loadSummary}
+                    sx={{ mb: 3 }}
                 >
-
-                    Generar
-
-                </Button>
+                    Resumen general
+                </Typography>
 
                 {
                     summary && (
 
-                        <Stack
-                            spacing={1}
-                            sx={{ mt: 2 }}
+                        <Grid
+                            container
+                            spacing={3}
                         >
 
-                            <Typography>
-                                Ventas:
-                                {" "}
-                                {summary.totalVentas}
-                            </Typography>
+                            <Grid
+                                size={{
+                                    xs: 6,
+                                    md: 3
+                                }}
+                            >
+                                <Metric
+                                    label="Ventas"
+                                    value={
+                                        summary.totalVentas
+                                    }
+                                />
+                            </Grid>
 
-                            <Typography>
-                                Subtotal:
-                                {" $"}
-                                {summary.subtotal}
-                            </Typography>
+                            <Grid
+                                size={{
+                                    xs: 6,
+                                    md: 3
+                                }}
+                            >
+                                <Metric
+                                    label="Subtotal"
+                                    value={
+                                        formatMoney(
+                                            summary.subtotal
+                                        )
+                                    }
+                                />
+                            </Grid>
 
-                            <Typography>
-                                IVA:
-                                {" $"}
-                                {summary.iva}
-                            </Typography>
+                            <Grid
+                                size={{
+                                    xs: 6,
+                                    md: 3
+                                }}
+                            >
+                                <Metric
+                                    label="IVA"
+                                    value={
+                                        formatMoney(
+                                            summary.iva
+                                        )
+                                    }
+                                />
+                            </Grid>
 
-                            <Typography>
-                                Total:
-                                {" $"}
-                                {summary.total}
-                            </Typography>
+                            <Grid
+                                size={{
+                                    xs: 6,
+                                    md: 3
+                                }}
+                            >
+                                <Metric
+                                    label="Total"
+                                    value={
+                                        formatMoney(
+                                            summary.total
+                                        )
+                                    }
+                                    emphasis
+                                />
+                            </Grid>
 
-                        </Stack>
+                        </Grid>
 
                     )
                 }
 
             </Paper>
 
-            <Paper sx={{ p: 3 }}>
+            {/* PERIODO + PENDIENTES */}
 
-                <Typography
-                    variant="h6"
-                    gutterBottom>
+            <Grid
+                container
+                spacing={3}
+                alignItems="stretch"
+            >
 
-                    Ventas Mensuales
-
-                </Typography>
-
-                <Stack
-                    direction="row"
-                    spacing={2}
-                    sx={{ mb: 2 }}
+                <Grid
+                    size={{
+                        xs: 12,
+                        md: 6
+                    }}
+                    sx={{
+                        display: "flex"
+                    }}
                 >
 
-                    <TextField
-                        label="Mes"
-                        type="number"
-                        value={month}
-                        onChange={(e) =>
-                            setMonth(
-                                Number(
-                                    e.target.value
-                                )
-                            )
-                        }
-                    />
-
-                    <TextField
-                        label="Año"
-                        type="number"
-                        value={year}
-                        onChange={(e) =>
-                            setYear(
-                                Number(
-                                    e.target.value
-                                )
-                            )
-                        }
-                    />
-
-                    <Button
-                        variant="contained"
-                        onClick={loadMonthly}
+                    <Paper
+                        sx={{
+                            p: 3,
+                            width: "100%",
+                            minHeight: 300,
+                            display: "flex",
+                            flexDirection: "column"
+                        }}
                     >
 
-                        Generar
+                        <Typography
+                            variant="h6"
+                            sx={{ mb: 1 }}
+                        >
+                            Periodo
+                        </Typography>
 
-                    </Button>
+                        <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ mb: 3 }}
+                        >
+                            Selecciona el mes para consultar
+                            las ventas pendientes por facturar.
+                        </Typography>
 
-                </Stack>
+                        <LocalizationProvider
+                            dateAdapter={AdapterDayjs}
+                            adapterLocale="es"
+                        >
 
-                {
-                    monthly && (
+                            <DatePicker
+                                label="Mes / Año"
+                                views={[
+                                    "month",
+                                    "year"
+                                ]}
+                                value={selectedDate}
+                                onChange={(value) => {
 
-                        <Stack spacing={1}>
+                                    if (value) {
 
-                            <Typography>
-                                Ventas:
-                                {" "}
-                                {monthly.ventas}
-                            </Typography>
+                                        setSelectedDate(
+                                            value
+                                        );
+                                    }
+                                }}
+                                sx={{
+                                    width: "100%",
+                                    maxWidth: 320
+                                }}
+                            />
 
-                            <Typography>
-                                Facturadas:
-                                {" "}
-                                {monthly.facturadas}
-                            </Typography>
+                        </LocalizationProvider>
 
-                            <Typography>
-                                Pendientes:
-                                {" "}
-                                {monthly.pendientesFacturar}
-                            </Typography>
+                    </Paper>
 
-                            <Divider />
+                </Grid>
 
-                            <Typography>
-                                Subtotal:
-                                {" $"}
-                                {monthly.subtotal}
-                            </Typography>
-
-                            <Typography>
-                                IVA:
-                                {" $"}
-                                {monthly.iva}
-                            </Typography>
-
-                            <Typography>
-                                Total:
-                                {" $"}
-                                {monthly.total}
-                            </Typography>
-
-                        </Stack>
-
-                    )
-                }
-
-            </Paper>
-
-            <Paper sx={{ p: 3 }}>
-
-                <Typography
-                    variant="h6"
-                    gutterBottom>
-
-                    Pendiente de Facturar
-
-                </Typography>
-
-                <Stack
-                    direction="row"
-                    spacing={2}
-                    sx={{ mb: 2 }}
+                <Grid
+                    size={{
+                        xs: 12,
+                        md: 6
+                    }}
+                    sx={{
+                        display: "flex"
+                    }}
                 >
 
-                    <Button
-                        variant="contained"
-                        onClick={loadPending}
+                    <Paper
+                        sx={{
+                            p: 3,
+                            width: "100%",
+                            minHeight: 300,
+                            display: "flex",
+                            flexDirection: "column"
+                        }}
                     >
-                        Generar
-                    </Button>
 
-                    <Button
-                        variant="outlined"
-                        onClick={downloadCsv}
-                        disabled={
-                            pendingSales.length === 0
+                        <Typography
+                            variant="h6"
+                            sx={{ mb: 2 }}
+                        >
+                            Pendientes por facturar
+                        </Typography>
+
+                        {
+                            pending?.ventas > 0
+
+                                ? (
+
+                                    <>
+
+                                        <Chip
+                                            label={
+                                                `${pending.ventas} venta(s) pendiente(s)`
+                                            }
+                                            color="error"
+                                            size="small"
+                                            sx={{
+                                                alignSelf:
+                                                    "flex-start",
+                                                mb: 3
+                                            }}
+                                        />
+
+                                        <Grid
+                                            container
+                                            spacing={3}
+                                        >
+
+                                            <Grid
+                                                size={{
+                                                    xs: 6,
+                                                    md: 4
+                                                }}
+                                            >
+                                                <Metric
+                                                    label="Subtotal"
+                                                    value={
+                                                        formatMoney(
+                                                            pending.subtotal
+                                                        )
+                                                    }
+                                                />
+                                            </Grid>
+
+                                            <Grid
+                                                size={{
+                                                    xs: 6,
+                                                    md: 4
+                                                }}
+                                            >
+                                                <Metric
+                                                    label="IVA"
+                                                    value={
+                                                        formatMoney(
+                                                            pending.iva
+                                                        )
+                                                    }
+                                                />
+                                            </Grid>
+
+                                            <Grid
+                                                size={{
+                                                    xs: 12,
+                                                    md: 4
+                                                }}
+                                            >
+                                                <Metric
+                                                    label="Total pendiente"
+                                                    value={
+                                                        formatMoney(
+                                                            pending.total
+                                                        )
+                                                    }
+                                                    emphasis
+                                                />
+                                            </Grid>
+
+                                        </Grid>
+
+                                        <Divider
+                                            sx={{
+                                                mt: "auto",
+                                                mb: 2
+                                            }}
+                                        />
+
+                                        <Stack
+                                            direction={{
+                                                xs: "column",
+                                                sm: "row"
+                                            }}
+                                            spacing={2}
+                                        >
+
+                                            <Button
+                                                variant="outlined"
+                                                onClick={
+                                                    downloadCsv
+                                                }
+                                            >
+                                                Exportar CSV
+                                            </Button>
+
+                                            <Button
+                                                variant="contained"
+                                                color="success"
+                                                onClick={
+                                                    handleMarkAsInvoiced
+                                                }
+                                            >
+                                                Marcar facturadas
+                                            </Button>
+
+                                        </Stack>
+
+                                    </>
+
+                                )
+
+                                : (
+
+                                    <>
+
+                                        <Chip
+                                            label="Todo facturado"
+                                            color="success"
+                                            size="small"
+                                            sx={{
+                                                alignSelf:
+                                                    "flex-start"
+                                            }}
+                                        />
+
+                                        <Typography
+                                            variant="body2"
+                                            color="text.secondary"
+                                            sx={{ mt: 2 }}
+                                        >
+                                            No hay ventas pendientes
+                                            para el periodo seleccionado.
+                                        </Typography>
+
+                                    </>
+
+                                )
                         }
-                    >
-                        Exportar CSV
-                    </Button>
-                    <Button
-                        variant="contained"
-                        color="success"
-                        onClick={handleMarkAsInvoiced}
-                        disabled={
-                            pendingSales.length === 0
-                        }
-                    >
-                        Marcar Facturadas
-                    </Button>
 
-                </Stack>
+                    </Paper>
 
-                {
-                    pending && (
+                </Grid>
+
+            </Grid>
+
+            {/* TABLA SOLO CUANDO EXISTEN PENDIENTES */}
+
+            {
+                pendingSales.length > 0 && (
+
+                    <Paper>
 
                         <Stack
-                            spacing={1}
-                            sx={{ mt: 2 }}
+                            sx={{
+                                px: 3,
+                                pt: 3,
+                                pb: 1
+                            }}
                         >
 
-                            <Typography>
-                                Ventas:
-                                {" "}
-                                {pending.ventas}
+                            <Typography
+                                variant="h6"
+                            >
+                                Detalle de ventas pendientes
                             </Typography>
 
-                            <Typography>
-                                Subtotal:
-                                {" $"}
-                                {pending.subtotal}
-                            </Typography>
-
-                            <Typography>
-                                IVA:
-                                {" $"}
-                                {pending.iva}
-                            </Typography>
-
-                            <Typography>
-                                Total:
-                                {" $"}
-                                {pending.total}
+                            <Typography
+                                variant="body2"
+                                color="text.secondary"
+                            >
+                                {
+                                    pendingSales.length
+                                } venta(s) del periodo seleccionado
                             </Typography>
 
                         </Stack>
 
-                    )
-                }
-                {
-                    pendingSales.length > 0 && (
-
-                        <TableContainer
-                            component={Paper}
-                            sx={{ mt: 3 }}
-                        >
+                        <TableContainer>
 
                             <Table>
 
@@ -434,18 +646,24 @@ function Reports() {
                                         </TableCell>
 
                                         <TableCell>
-                                            Método Pago
+                                            Método de pago
                                         </TableCell>
 
-                                        <TableCell align="right">
+                                        <TableCell
+                                            align="right"
+                                        >
                                             Subtotal
                                         </TableCell>
 
-                                        <TableCell align="right">
+                                        <TableCell
+                                            align="right"
+                                        >
                                             IVA
                                         </TableCell>
 
-                                        <TableCell align="right">
+                                        <TableCell
+                                            align="right"
+                                        >
                                             Total
                                         </TableCell>
 
@@ -460,7 +678,10 @@ function Reports() {
                                             (sale) => (
 
                                                 <TableRow
-                                                    key={sale.ventaId}
+                                                    key={
+                                                        sale.ventaId
+                                                    }
+                                                    hover
                                                 >
 
                                                     <TableCell>
@@ -471,42 +692,52 @@ function Reports() {
                                                         {
                                                             new Date(
                                                                 sale.fecha
-                                                            ).toLocaleDateString()
+                                                            )
+                                                                .toLocaleDateString(
+                                                                    "es-MX"
+                                                                )
                                                         }
                                                     </TableCell>
 
                                                     <TableCell>
-                                                        {sale.canalVenta}
+                                                        {
+                                                            sale.canalVenta
+                                                        }
                                                     </TableCell>
 
                                                     <TableCell>
-                                                        {sale.metodoPago}
+                                                        {
+                                                            sale.metodoPago
+                                                        }
                                                     </TableCell>
 
-                                                    <TableCell align="right">
-                                                        $
+                                                    <TableCell
+                                                        align="right"
+                                                    >
                                                         {
-                                                            Number(
+                                                            formatMoney(
                                                                 sale.subtotal
-                                                            ).toFixed(2)
+                                                            )
                                                         }
                                                     </TableCell>
 
-                                                    <TableCell align="right">
-                                                        $
+                                                    <TableCell
+                                                        align="right"
+                                                    >
                                                         {
-                                                            Number(
+                                                            formatMoney(
                                                                 sale.iva
-                                                            ).toFixed(2)
+                                                            )
                                                         }
                                                     </TableCell>
 
-                                                    <TableCell align="right">
-                                                        $
+                                                    <TableCell
+                                                        align="right"
+                                                    >
                                                         {
-                                                            Number(
+                                                            formatMoney(
                                                                 sale.total
-                                                            ).toFixed(2)
+                                                            )
                                                         }
                                                     </TableCell>
 
@@ -522,10 +753,10 @@ function Reports() {
 
                         </TableContainer>
 
-                    )
-                }
+                    </Paper>
 
-            </Paper>
+                )
+            }
 
         </Stack>
 
