@@ -19,7 +19,9 @@ import {
     TableHead,
     TableRow,
     Button,
-    Chip
+    Chip,
+    CircularProgress,
+    Box
 } from "@mui/material";
 
 import {
@@ -33,6 +35,12 @@ import {
 import {
     DatePicker
 } from "@mui/x-date-pickers/DatePicker";
+
+import LoadingOverlay
+    from "../components/LoadingOverlay";
+
+import useLoadingState
+    from "../hooks/useLoadingState";
 
 import {
     getSalesSummary,
@@ -56,6 +64,17 @@ function Reports() {
     const [selectedDate,
         setSelectedDate] =
         useState(dayjs());
+
+    const [loadingPending,
+        setLoadingPending] =
+        useState(false);
+
+    const {
+        showLoader,
+        showSlowMessage
+    } = useLoadingState(
+        loadingPending
+    );
 
     const formatMoney = (amount) =>
         new Intl.NumberFormat(
@@ -109,6 +128,8 @@ function Reports() {
 
     const loadPending = async (date = selectedDate) => {
 
+        setLoadingPending(true);
+
         try {
 
             const [
@@ -135,6 +156,10 @@ function Reports() {
         } catch (error) {
 
             console.error(error);
+
+        } finally {
+
+            setLoadingPending(false);
         }
     };
 
@@ -262,79 +287,108 @@ function Reports() {
                 </Typography>
 
                 {
-                    summary && (
+                    summary
 
-                        <Grid
-                            container
-                            spacing={3}
-                        >
+                        ? (
 
                             <Grid
-                                size={{
-                                    xs: 6,
-                                    md: 3
-                                }}
+                                container
+                                spacing={3}
                             >
-                                <Metric
-                                    label="Ventas"
-                                    value={
-                                        summary.totalVentas
-                                    }
-                                />
+
+                                <Grid
+                                    size={{
+                                        xs: 6,
+                                        md: 3
+                                    }}
+                                >
+                                    <Metric
+                                        label="Ventas"
+                                        value={
+                                            summary.totalVentas
+                                        }
+                                    />
+                                </Grid>
+
+                                <Grid
+                                    size={{
+                                        xs: 6,
+                                        md: 3
+                                    }}
+                                >
+                                    <Metric
+                                        label="Subtotal"
+                                        value={
+                                            formatMoney(
+                                                summary.subtotal
+                                            )
+                                        }
+                                    />
+                                </Grid>
+
+                                <Grid
+                                    size={{
+                                        xs: 6,
+                                        md: 3
+                                    }}
+                                >
+                                    <Metric
+                                        label="IVA"
+                                        value={
+                                            formatMoney(
+                                                summary.iva
+                                            )
+                                        }
+                                    />
+                                </Grid>
+
+                                <Grid
+                                    size={{
+                                        xs: 6,
+                                        md: 3
+                                    }}
+                                >
+                                    <Metric
+                                        label="Total"
+                                        value={
+                                            formatMoney(
+                                                summary.total
+                                            )
+                                        }
+                                        emphasis
+                                    />
+                                </Grid>
+
                             </Grid>
 
-                            <Grid
-                                size={{
-                                    xs: 6,
-                                    md: 3
+                        )
+
+                        : (
+
+                            <Box
+                                sx={{
+                                    minHeight: 90,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: 2
                                 }}
                             >
-                                <Metric
-                                    label="Subtotal"
-                                    value={
-                                        formatMoney(
-                                            summary.subtotal
-                                        )
-                                    }
+
+                                <CircularProgress
+                                    size={28}
                                 />
-                            </Grid>
 
-                            <Grid
-                                size={{
-                                    xs: 6,
-                                    md: 3
-                                }}
-                            >
-                                <Metric
-                                    label="IVA"
-                                    value={
-                                        formatMoney(
-                                            summary.iva
-                                        )
-                                    }
-                                />
-                            </Grid>
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                >
+                                    Cargando resumen...
+                                </Typography>
 
-                            <Grid
-                                size={{
-                                    xs: 6,
-                                    md: 3
-                                }}
-                            >
-                                <Metric
-                                    label="Total"
-                                    value={
-                                        formatMoney(
-                                            summary.total
-                                        )
-                                    }
-                                    emphasis
-                                />
-                            </Grid>
+                            </Box>
 
-                        </Grid>
-
-                    )
+                        )
                 }
 
             </Paper>
@@ -444,147 +498,177 @@ function Reports() {
                         </Typography>
 
                         {
-                            pending?.ventas > 0
+                            showLoader
 
                                 ? (
 
-                                    <>
+                                    <Box
+                                        sx={{
+                                            flex: 1,
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            gap: 2
+                                        }}
+                                    >
 
-                                        <Chip
-                                            label={
-                                                `${pending.ventas} venta(s) pendiente(s)`
-                                            }
-                                            color="error"
-                                            size="small"
-                                            sx={{
-                                                alignSelf:
-                                                    "flex-start",
-                                                mb: 3
-                                            }}
-                                        />
-
-                                        <Grid
-                                            container
-                                            spacing={3}
-                                        >
-
-                                            <Grid
-                                                size={{
-                                                    xs: 6,
-                                                    md: 4
-                                                }}
-                                            >
-                                                <Metric
-                                                    label="Subtotal"
-                                                    value={
-                                                        formatMoney(
-                                                            pending.subtotal
-                                                        )
-                                                    }
-                                                />
-                                            </Grid>
-
-                                            <Grid
-                                                size={{
-                                                    xs: 6,
-                                                    md: 4
-                                                }}
-                                            >
-                                                <Metric
-                                                    label="IVA"
-                                                    value={
-                                                        formatMoney(
-                                                            pending.iva
-                                                        )
-                                                    }
-                                                />
-                                            </Grid>
-
-                                            <Grid
-                                                size={{
-                                                    xs: 12,
-                                                    md: 4
-                                                }}
-                                            >
-                                                <Metric
-                                                    label="Total pendiente"
-                                                    value={
-                                                        formatMoney(
-                                                            pending.total
-                                                        )
-                                                    }
-                                                    emphasis
-                                                />
-                                            </Grid>
-
-                                        </Grid>
-
-                                        <Divider
-                                            sx={{
-                                                mt: "auto",
-                                                mb: 2
-                                            }}
-                                        />
-
-                                        <Stack
-                                            direction={{
-                                                xs: "column",
-                                                sm: "row"
-                                            }}
-                                            spacing={2}
-                                        >
-
-                                            <Button
-                                                variant="outlined"
-                                                onClick={
-                                                    downloadCsv
-                                                }
-                                            >
-                                                Exportar CSV
-                                            </Button>
-
-                                            <Button
-                                                variant="contained"
-                                                color="success"
-                                                onClick={
-                                                    handleMarkAsInvoiced
-                                                }
-                                            >
-                                                Marcar facturadas
-                                            </Button>
-
-                                        </Stack>
-
-                                    </>
-
-                                )
-
-                                : (
-
-                                    <>
-
-                                        <Chip
-                                            label="Todo facturado"
-                                            color="success"
-                                            size="small"
-                                            sx={{
-                                                alignSelf:
-                                                    "flex-start"
-                                            }}
+                                        <CircularProgress
+                                            size={32}
                                         />
 
                                         <Typography
                                             variant="body2"
                                             color="text.secondary"
-                                            sx={{ mt: 2 }}
                                         >
-                                            No hay ventas pendientes
-                                            para el periodo seleccionado.
+                                            Consultando ventas...
                                         </Typography>
 
-                                    </>
+                                    </Box>
 
                                 )
+
+                                : pending?.ventas > 0
+
+                                    ? (
+
+                                        <>
+
+                                            <Chip
+                                                label={
+                                                    `${pending.ventas} venta(s) pendiente(s)`
+                                                }
+                                                color="error"
+                                                size="small"
+                                                sx={{
+                                                    alignSelf:
+                                                        "flex-start",
+                                                    mb: 3
+                                                }}
+                                            />
+
+                                            <Grid
+                                                container
+                                                spacing={3}
+                                            >
+
+                                                <Grid
+                                                    size={{
+                                                        xs: 6,
+                                                        md: 4
+                                                    }}
+                                                >
+                                                    <Metric
+                                                        label="Subtotal"
+                                                        value={
+                                                            formatMoney(
+                                                                pending.subtotal
+                                                            )
+                                                        }
+                                                    />
+                                                </Grid>
+
+                                                <Grid
+                                                    size={{
+                                                        xs: 6,
+                                                        md: 4
+                                                    }}
+                                                >
+                                                    <Metric
+                                                        label="IVA"
+                                                        value={
+                                                            formatMoney(
+                                                                pending.iva
+                                                            )
+                                                        }
+                                                    />
+                                                </Grid>
+
+                                                <Grid
+                                                    size={{
+                                                        xs: 12,
+                                                        md: 4
+                                                    }}
+                                                >
+                                                    <Metric
+                                                        label="Total pendiente"
+                                                        value={
+                                                            formatMoney(
+                                                                pending.total
+                                                            )
+                                                        }
+                                                        emphasis
+                                                    />
+                                                </Grid>
+
+                                            </Grid>
+
+                                            <Divider
+                                                sx={{
+                                                    mt: "auto",
+                                                    mb: 2
+                                                }}
+                                            />
+
+                                            <Stack
+                                                direction={{
+                                                    xs: "column",
+                                                    sm: "row"
+                                                }}
+                                                spacing={2}
+                                            >
+
+                                                <Button
+                                                    variant="outlined"
+                                                    onClick={
+                                                        downloadCsv
+                                                    }
+                                                >
+                                                    Exportar CSV
+                                                </Button>
+
+                                                <Button
+                                                    variant="contained"
+                                                    color="success"
+                                                    onClick={
+                                                        handleMarkAsInvoiced
+                                                    }
+                                                >
+                                                    Marcar facturadas
+                                                </Button>
+
+                                            </Stack>
+
+                                        </>
+
+                                    )
+
+                                    : (
+
+                                        <>
+
+                                            <Chip
+                                                label="Todo facturado"
+                                                color="success"
+                                                size="small"
+                                                sx={{
+                                                    alignSelf:
+                                                        "flex-start"
+                                                }}
+                                            />
+
+                                            <Typography
+                                                variant="body2"
+                                                color="text.secondary"
+                                                sx={{ mt: 2 }}
+                                            >
+                                                No hay ventas pendientes
+                                                para el periodo seleccionado.
+                                            </Typography>
+
+                                        </>
+
+                                    )
                         }
 
                     </Paper>
@@ -593,170 +677,215 @@ function Reports() {
 
             </Grid>
 
-            {/* TABLA SOLO CUANDO EXISTEN PENDIENTES */}
+            {/* DETALLE DE VENTAS PENDIENTES */}
 
-            {
-                pendingSales.length > 0 && (
+            <Paper>
 
-                    <Paper>
+                <Stack
+                    sx={{
+                        px: 3,
+                        pt: 3,
+                        pb: 1
+                    }}
+                >
 
-                        <Stack
-                            sx={{
-                                px: 3,
-                                pt: 3,
-                                pb: 1
-                            }}
-                        >
+                    <Typography variant="h6">
+                        Detalle de ventas pendientes
+                    </Typography>
 
-                            <Typography
-                                variant="h6"
-                            >
-                                Detalle de ventas pendientes
-                            </Typography>
-
+                    {
+                        !showLoader && (
                             <Typography
                                 variant="body2"
                                 color="text.secondary"
                             >
                                 {
-                                    pendingSales.length
-                                } venta(s) del periodo seleccionado
+                                    pendingSales.length > 0
+                                        ? `${pendingSales.length} venta(s) del periodo seleccionado`
+                                        : "Ventas pendientes del periodo seleccionado"
+                                }
                             </Typography>
+                        )
+                    }
 
-                        </Stack>
+                </Stack>
 
-                        <TableContainer>
+                {
+                    showLoader
 
-                            <Table>
+                        ? (
 
-                                <TableHead>
+                            <Box
+                                sx={{
+                                    minHeight: 180,
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: 2
+                                }}
+                            >
 
-                                    <TableRow>
+                                <CircularProgress
+                                    size={32}
+                                />
 
-                                        <TableCell>
-                                            Venta
-                                        </TableCell>
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                >
+                                    Consultando detalle...
+                                </Typography>
 
-                                        <TableCell>
-                                            Fecha
-                                        </TableCell>
+                            </Box>
 
-                                        <TableCell>
-                                            Canal
-                                        </TableCell>
+                        )
 
-                                        <TableCell>
-                                            Método de pago
-                                        </TableCell>
+                        : pendingSales.length > 0
 
-                                        <TableCell
-                                            align="right"
-                                        >
-                                            Subtotal
-                                        </TableCell>
+                            ? (
 
-                                        <TableCell
-                                            align="right"
-                                        >
-                                            IVA
-                                        </TableCell>
+                                <TableContainer>
 
-                                        <TableCell
-                                            align="right"
-                                        >
-                                            Total
-                                        </TableCell>
+                                    <Table>
 
-                                    </TableRow>
+                                        <TableHead>
 
-                                </TableHead>
+                                            <TableRow>
 
-                                <TableBody>
+                                                <TableCell>
+                                                    Venta
+                                                </TableCell>
 
-                                    {
-                                        pendingSales.map(
-                                            (sale) => (
+                                                <TableCell>
+                                                    Fecha
+                                                </TableCell>
 
-                                                <TableRow
-                                                    key={
-                                                        sale.ventaId
-                                                    }
-                                                    hover
-                                                >
+                                                <TableCell>
+                                                    Canal
+                                                </TableCell>
 
-                                                    <TableCell>
-                                                        #{sale.ventaId}
-                                                    </TableCell>
+                                                <TableCell>
+                                                    Método de pago
+                                                </TableCell>
 
-                                                    <TableCell>
-                                                        {
-                                                            new Date(
-                                                                sale.fecha
-                                                            )
-                                                                .toLocaleDateString(
-                                                                    "es-MX"
-                                                                )
-                                                        }
-                                                    </TableCell>
+                                                <TableCell align="right">
+                                                    Subtotal
+                                                </TableCell>
 
-                                                    <TableCell>
-                                                        {
-                                                            sale.canalVenta
-                                                        }
-                                                    </TableCell>
+                                                <TableCell align="right">
+                                                    IVA
+                                                </TableCell>
 
-                                                    <TableCell>
-                                                        {
-                                                            sale.metodoPago
-                                                        }
-                                                    </TableCell>
+                                                <TableCell align="right">
+                                                    Total
+                                                </TableCell>
 
-                                                    <TableCell
-                                                        align="right"
-                                                    >
-                                                        {
-                                                            formatMoney(
-                                                                sale.subtotal
-                                                            )
-                                                        }
-                                                    </TableCell>
+                                            </TableRow>
 
-                                                    <TableCell
-                                                        align="right"
-                                                    >
-                                                        {
-                                                            formatMoney(
-                                                                sale.iva
-                                                            )
-                                                        }
-                                                    </TableCell>
+                                        </TableHead>
 
-                                                    <TableCell
-                                                        align="right"
-                                                    >
-                                                        {
-                                                            formatMoney(
-                                                                sale.total
-                                                            )
-                                                        }
-                                                    </TableCell>
+                                        <TableBody>
 
-                                                </TableRow>
+                                            {
+                                                pendingSales.map(
+                                                    (sale) => (
 
-                                            )
-                                        )
-                                    }
+                                                        <TableRow
+                                                            key={sale.ventaId}
+                                                            hover
+                                                        >
 
-                                </TableBody>
+                                                            <TableCell>
+                                                                #{sale.ventaId}
+                                                            </TableCell>
 
-                            </Table>
+                                                            <TableCell>
+                                                                {
+                                                                    new Date(
+                                                                        sale.fecha
+                                                                    ).toLocaleDateString(
+                                                                        "es-MX"
+                                                                    )
+                                                                }
+                                                            </TableCell>
 
-                        </TableContainer>
+                                                            <TableCell>
+                                                                {sale.canalVenta}
+                                                            </TableCell>
 
-                    </Paper>
+                                                            <TableCell>
+                                                                {sale.metodoPago}
+                                                            </TableCell>
 
-                )
-            }
+                                                            <TableCell align="right">
+                                                                {
+                                                                    formatMoney(
+                                                                        sale.subtotal
+                                                                    )
+                                                                }
+                                                            </TableCell>
+
+                                                            <TableCell align="right">
+                                                                {
+                                                                    formatMoney(
+                                                                        sale.iva
+                                                                    )
+                                                                }
+                                                            </TableCell>
+
+                                                            <TableCell align="right">
+                                                                {
+                                                                    formatMoney(
+                                                                        sale.total
+                                                                    )
+                                                                }
+                                                            </TableCell>
+
+                                                        </TableRow>
+
+                                                    )
+                                                )
+                                            }
+
+                                        </TableBody>
+
+                                    </Table>
+
+                                </TableContainer>
+
+                            )
+
+                            : (
+
+                                <Box
+                                    sx={{
+                                        minHeight: 140,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center"
+                                    }}
+                                >
+
+                                    <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                    >
+                                        No hay ventas pendientes
+                                        para este periodo.
+                                    </Typography>
+
+                                </Box>
+
+                            )
+                }
+
+            </Paper>
+
+            <LoadingOverlay
+                open={showSlowMessage}
+                message="Preparando El Mundo Exterior..."
+            />
 
         </Stack>
 
