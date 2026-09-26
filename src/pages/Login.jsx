@@ -63,9 +63,32 @@ function Login() {
                     result.token
                 );
 
-                navigate(
-                    "/dashboard"
+                localStorage.setItem(
+                    "username",
+                    result.username
                 );
+
+                localStorage.setItem(
+                    "role",
+                    result.role
+                );
+
+                if (
+                    result.role ===
+                    "CONTADOR"
+                ) {
+
+                    navigate(
+                        "/reports"
+                    );
+
+                } else {
+
+                    navigate(
+                        "/dashboard"
+                    );
+
+                }
 
             } catch {
 

@@ -13,7 +13,7 @@ export const login =
 
         const response =
             await api.get(
-                "/products",
+                "/auth/me",
                 {
                     headers: {
                         Authorization:
@@ -23,8 +23,10 @@ export const login =
             );
 
         return {
-            success:
-                response.status === 200,
-            token
+            token,
+            username:
+                response.data.username,
+            role:
+                response.data.role
         };
     };

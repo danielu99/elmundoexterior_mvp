@@ -3,7 +3,8 @@ import {
 } from "react-router-dom";
 
 function ProtectedRoute({
-    children
+    children,
+    allowedRoles
 }) {
 
     const token =
@@ -11,14 +12,35 @@ function ProtectedRoute({
             "authToken"
         );
 
-    return token
-        ? children
-        : (
+    const role =
+        localStorage.getItem(
+            "role"
+        );
+
+    if (!token) {
+
+        return (
             <Navigate
                 to="/login"
                 replace
             />
         );
+    }
+
+    if (
+        allowedRoles &&
+        !allowedRoles.includes(role)
+    ) {
+
+        return (
+            <Navigate
+                to="/reports"
+                replace
+            />
+        );
+    }
+
+    return children;
 }
 
 export default ProtectedRoute;

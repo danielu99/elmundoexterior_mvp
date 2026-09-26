@@ -45,27 +45,69 @@ function App() {
 
                     <Route
                         path="/dashboard"
-                        element={<Dashboard />}
+                        element={
+                            <ProtectedRoute
+                                allowedRoles={[
+                                    "ADMIN"
+                                ]}
+                            >
+                                <Dashboard />
+                            </ProtectedRoute>
+                        }
                     />
 
                     <Route
                         path="/products"
-                        element={<Products />}
+                        element={
+                            <ProtectedRoute
+                                allowedRoles={[
+                                    "ADMIN"
+                                ]}
+                            >
+                                <Products />
+                            </ProtectedRoute>
+                        }
                     />
 
                     <Route
                         path="/purchases"
-                        element={<Purchases />}
+                        element={
+                            <ProtectedRoute
+                                allowedRoles={[
+                                    "ADMIN"
+                                ]}
+                            >
+                                <Purchases />
+                            </ProtectedRoute>
+                        }
                     />
 
                     <Route
                         path="/sales"
-                        element={<Sales />}
+                        element={
+                            <ProtectedRoute
+                                allowedRoles={[
+                                    "ADMIN",
+                                    "CONTADOR"
+                                ]}
+                            >
+                                <Sales />
+                            </ProtectedRoute>
+                        }
                     />
 
                     <Route
                         path="/reports"
-                        element={<Reports />}
+                        element={
+                            <ProtectedRoute
+                                allowedRoles={[
+                                    "ADMIN",
+                                    "CONTADOR"
+                                ]}
+                            >
+                                <Reports />
+                            </ProtectedRoute>
+                        }
                     />
 
                 </Route>

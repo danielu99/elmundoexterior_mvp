@@ -27,12 +27,28 @@ function SidebarLayout() {
 
     const navigate =
         useNavigate();
-        
+
+    const role =
+        localStorage.getItem(
+            "role"
+        );
+
+    const isAdmin =
+        role === "ADMIN";
+
     const handleLogout =
         () => {
 
             localStorage.removeItem(
                 "authToken"
+            );
+
+            localStorage.removeItem(
+                "username"
+            );
+
+            localStorage.removeItem(
+                "role"
             );
 
             navigate(
@@ -71,86 +87,88 @@ function SidebarLayout() {
                 </Toolbar>
 
                 <List>
+                    {isAdmin && (
+                        <ListItem disablePadding>
 
-                    <ListItem disablePadding>
+                            <ListItemButton
+                                component={Link}
+                                to="/dashboard"
+                                selected={location.pathname === "/dashboard"}
+                                sx={{
+                                    borderRadius: 2,
+                                    mx: 1,
+                                    my: 0.5,
+                                    "&.Mui-selected": {
+                                        backgroundColor: "#e3f2fd",
+                                        fontWeight: "bold"
+                                    }
+                                }}
+                            >
 
-                        <ListItemButton
-                            component={Link}
-                            to="/dashboard"
-                            selected={location.pathname === "/dashboard"}
-                            sx={{
-                                borderRadius: 2,
-                                mx: 1,
-                                my: 0.5,
-                                "&.Mui-selected": {
-                                    backgroundColor: "#e3f2fd",
-                                    fontWeight: "bold"
-                                }
-                            }}
-                        >
+                                <DashboardIcon sx={{ mr: 2 }} />
 
-                            <DashboardIcon sx={{ mr: 2 }} />
+                                <ListItemText
+                                    primary="Dashboard"
+                                />
 
-                            <ListItemText
-                                primary="Dashboard"
-                            />
+                            </ListItemButton>
 
-                        </ListItemButton>
+                        </ListItem>
+                    )}
+                    {isAdmin && (
+                        <ListItem disablePadding>
 
-                    </ListItem>
+                            <ListItemButton
+                                component={Link}
+                                to="/products"
+                                selected={location.pathname === "/products"}
+                                sx={{
+                                    borderRadius: 2,
+                                    mx: 1,
+                                    my: 0.5,
+                                    "&.Mui-selected": {
+                                        backgroundColor: "#e3f2fd",
+                                        fontWeight: "bold"
+                                    }
+                                }}>
 
-                    <ListItem disablePadding>
+                                <InventoryIcon sx={{ mr: 2 }} />
 
-                        <ListItemButton
-                            component={Link}
-                            to="/products"
-                            selected={location.pathname === "/products"}
-                            sx={{
-                                borderRadius: 2,
-                                mx: 1,
-                                my: 0.5,
-                                "&.Mui-selected": {
-                                    backgroundColor: "#e3f2fd",
-                                    fontWeight: "bold"
-                                }
-                            }}>
+                                <ListItemText
+                                    primary="Productos"
+                                />
 
-                            <InventoryIcon sx={{ mr: 2 }} />
+                            </ListItemButton>
 
-                            <ListItemText
-                                primary="Productos"
-                            />
+                        </ListItem>
+                    )}
+                    {isAdmin && (
+                        <ListItem disablePadding>
 
-                        </ListItemButton>
+                            <ListItemButton
+                                component={Link}
+                                to="/purchases"
+                                selected={location.pathname === "/purchases"}
+                                sx={{
+                                    borderRadius: 2,
+                                    mx: 1,
+                                    my: 0.5,
+                                    "&.Mui-selected": {
+                                        backgroundColor: "#e3f2fd",
+                                        fontWeight: "bold"
+                                    }
+                                }}>
 
-                    </ListItem>
+                                <ShoppingCartIcon sx={{ mr: 2 }} />
 
-                    <ListItem disablePadding>
+                                <ListItemText
+                                    primary="Compras"
+                                />
 
-                        <ListItemButton
-                            component={Link}
-                            to="/purchases"
-                            selected={location.pathname === "/purchases"}
-                            sx={{
-                                borderRadius: 2,
-                                mx: 1,
-                                my: 0.5,
-                                "&.Mui-selected": {
-                                    backgroundColor: "#e3f2fd",
-                                    fontWeight: "bold"
-                                }
-                            }}>
+                            </ListItemButton>
 
-                            <ShoppingCartIcon sx={{ mr: 2 }} />
-
-                            <ListItemText
-                                primary="Compras"
-                            />
-
-                        </ListItemButton>
-
-                    </ListItem>
-
+                        </ListItem>
+                    )}
                     <ListItem disablePadding>
 
                         <ListItemButton

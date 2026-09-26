@@ -77,6 +77,13 @@ import {
 import { formatCurrency } from "../utils/formatters";
 
 function Sales() {
+    const role =
+        localStorage.getItem(
+            "role"
+        );
+
+    const isAdmin =
+        role === "ADMIN";
 
     const [products,
         setProducts] =
@@ -108,7 +115,9 @@ function Sales() {
 
     const [tab,
         setTab] =
-        useState(0);
+        useState(
+            isAdmin ? 0 : 1
+        );
 
     const [fromDate,
         setFromDate] =
@@ -263,8 +272,9 @@ function Sales() {
         };
 
     useEffect(() => {
-
-        loadData();
+        if (isAdmin) {
+            loadData();
+        }
 
     }, []);
 
@@ -380,25 +390,32 @@ function Sales() {
 
             </Typography>
 
-            <Tabs
-                value={tab}
-                onChange={(event, value) =>
-                    setTab(value)
-                }
-                sx={{ mb: 3 }}
-            >
+            {
+                isAdmin && (
 
-                <Tab
-                    label="Nueva Venta"
-                />
+                    <Tabs
+                        value={tab}
+                        onChange={(event, value) =>
+                            setTab(value)
+                        }
+                        sx={{ mb: 3 }}
+                    >
 
-                <Tab
-                    label="Historial"
-                />
+                        <Tab
+                            label="Nueva Venta"
+                        />
 
-            </Tabs>
+                        <Tab
+                            label="Historial"
+                        />
+
+                    </Tabs>
+
+                )
+            }
 
             {
+                isAdmin &&
                 tab === 0 && (
 
                     <SaleForm
@@ -877,17 +894,23 @@ function Sales() {
                         }
 
                     </Typography>
-                    <Button
-                        variant="contained"
-                        sx={{ mt: 2 }}
-                        onClick={() =>
-                            setOpenExpenseDialog(
-                                true
-                            )
-                        }
-                    >
-                        Agregar gasto
-                    </Button>
+                    {
+                        isAdmin && (
+
+                            <Button
+                                variant="contained"
+                                sx={{ mt: 2 }}
+                                onClick={() =>
+                                    setOpenExpenseDialog(
+                                        true
+                                    )
+                                }
+                            >
+                                Agregar gasto
+                            </Button>
+
+                        )
+                    }
 
                 </DialogContent>
 
