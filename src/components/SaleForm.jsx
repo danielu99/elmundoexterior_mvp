@@ -50,7 +50,8 @@ function SaleForm({
         precioUnitario: ""
     });
 
-    const [items, setItems] = useState([]);
+    const [items, setItems] =
+        useState([]);
 
     const [scannerOpen, setScannerOpen] =
         useState(false);
@@ -63,11 +64,15 @@ function SaleForm({
 
 
     /*
-     * Selección manual de producto.
+     * Selecciona un producto en el formulario.
      *
-     * Se utiliza desde el Autocomplete.
+     * Tanto el Autocomplete como el scanner
+     * terminan pasando por aquí.
      */
     const selectProduct = (product) => {
+
+        setScanMessage("");
+        setScanError("");
 
         if (!product) {
 
@@ -81,8 +86,12 @@ function SaleForm({
         }
 
         setItem({
-            productId: product.id,
-            cantidad: 1,
+            productId:
+                product.id,
+
+            cantidad:
+                1,
+
             precioUnitario:
                 product.precioFinal ?? ""
         });
@@ -90,7 +99,8 @@ function SaleForm({
 
 
     /*
-     * Agregar producto manualmente.
+     * Agrega al carrito el producto que
+     * actualmente está seleccionado.
      */
     const addItem = () => {
 
@@ -105,9 +115,38 @@ function SaleForm({
             return;
         }
 
+
         /*
-         * Revisamos si el producto ya está
-         * agregado a la venta.
+         * Validaciones básicas.
+         */
+        if (
+            !item.cantidad ||
+            item.cantidad <= 0
+        ) {
+
+            alert(
+                "La cantidad debe ser mayor a 0"
+            );
+
+            return;
+        }
+
+        if (
+            item.precioUnitario === "" ||
+            item.precioUnitario < 0
+        ) {
+
+            alert(
+                "Ingresa un precio válido"
+            );
+
+            return;
+        }
+
+
+        /*
+         * Revisamos si el producto ya existe
+         * en el carrito.
          */
         const existingItem =
             items.find(
@@ -116,16 +155,17 @@ function SaleForm({
                     selectedProduct.id
             );
 
-        /*
-         * Si ya existe, incrementamos
-         * su cantidad.
-         */
+
         if (existingItem) {
 
             const newQuantity =
                 existingItem.cantidad +
                 item.cantidad;
 
+            /*
+             * Validamos el stock tomando en
+             * cuenta lo que ya estaba agregado.
+             */
             if (
                 newQuantity >
                 selectedProduct.stockActual
@@ -138,6 +178,13 @@ function SaleForm({
                 return;
             }
 
+
+            /*
+             * Si ya existía, acumulamos cantidad.
+             *
+             * También conservamos el precio que
+             * acaba de capturar el usuario.
+             */
             setItems(
                 currentItems =>
                     currentItems.map(
@@ -160,7 +207,7 @@ function SaleForm({
         } else {
 
             /*
-             * Producto nuevo en la venta.
+             * Producto nuevo.
              */
             if (
                 item.cantidad >
@@ -184,34 +231,42 @@ function SaleForm({
             );
         }
 
+
         /*
-         * Limpiamos selección.
+         * Limpiamos el formulario para
+         * capturar el siguiente producto.
          */
         setItem({
             productId: "",
             cantidad: 1,
             precioUnitario: ""
         });
+
+        setScanMessage("");
+        setScanError("");
     };
 
 
     /*
-     * Código detectado por la cámara.
+     * Código confirmado por BarcodeScanner.
+     *
+     * IMPORTANTE:
+     * ya NO agrega automáticamente al carrito.
+     *
+     * Únicamente busca el producto y lo deja
+     * seleccionado para que el usuario pueda
+     * modificar cantidad y precio.
      */
     const handleBarcodeDetected =
         async (code) => {
 
             setScannerOpen(false);
 
-            setScanError("");
             setScanMessage("");
+            setScanError("");
 
             try {
 
-                /*
-                 * Buscamos el producto
-                 * directamente por barcode.
-                 */
                 const response =
                     await api.get(
                         `/products/barcode/${
@@ -222,68 +277,26 @@ function SaleForm({
                 const product =
                     response.data;
 
-                /*
-                 * ¿Ya está agregado?
-                 */
-                const existingItem =
-                    items.find(
-                        currentItem =>
-                            currentItem.productId ===
-                            product.id
-                    );
 
                 /*
-                 * Si ya existe:
-                 * incrementamos cantidad.
-                 */
-                if (existingItem) {
-
-                    const newQuantity =
-                        existingItem.cantidad + 1;
-
-                    if (
-                        newQuantity >
-                        product.stockActual
-                    ) {
-
-                        setScanError(
-                            `No hay más stock disponible de ${product.nombre}.`
-                        );
-
-                        return;
-                    }
-
-                    setItems(
-                        currentItems =>
-                            currentItems.map(
-                                currentItem =>
-                                    currentItem.productId ===
-                                    product.id
-
-                                        ? {
-                                            ...currentItem,
-                                            cantidad:
-                                                newQuantity
-                                        }
-
-                                        : currentItem
-                            )
-                    );
-
-                    setScanMessage(
-                        `${product.nombre}: cantidad aumentada a ${newQuantity}.`
-                    );
-
-                    return;
-                }
-
-                /*
-                 * Primera vez que aparece
-                 * el producto en la venta.
+                 * Si no tiene stock, permitimos
+                 * identificarlo pero avisamos
+                 * inmediatamente.
                  */
                 if (
                     product.stockActual <= 0
                 ) {
+
+                    setItem({
+                        productId:
+                            product.id,
+
+                        cantidad:
+                            1,
+
+                        precioUnitario:
+                            product.precioFinal ?? ""
+                    });
 
                     setScanError(
                         `${product.nombre} no tiene stock disponible.`
@@ -292,21 +305,26 @@ function SaleForm({
                     return;
                 }
 
-                setItems(
-                    currentItems => [
-                        ...currentItems,
-                        {
-                            productId:
-                                product.id,
-                            cantidad: 1,
-                            precioUnitario:
-                                product.precioFinal
-                        }
-                    ]
-                );
+
+                /*
+                 * Lo seleccionamos exactamente
+                 * igual que si se hubiera elegido
+                 * desde el buscador.
+                 */
+                setItem({
+                    productId:
+                        product.id,
+
+                    cantidad:
+                        1,
+
+                    precioUnitario:
+                        product.precioFinal ?? ""
+                });
+
 
                 setScanMessage(
-                    `${product.nombre} agregado a la venta.`
+                    `${product.nombre} seleccionado. Puedes ajustar cantidad o precio antes de agregarlo.`
                 );
 
             } catch (error) {
@@ -332,6 +350,9 @@ function SaleForm({
         };
 
 
+    /*
+     * Eliminar producto del carrito.
+     */
     const removeItem =
         (index) => {
 
@@ -344,6 +365,9 @@ function SaleForm({
         };
 
 
+    /*
+     * Limpiar toda la venta.
+     */
     const clearSale =
         () => {
 
@@ -369,6 +393,9 @@ function SaleForm({
         };
 
 
+    /*
+     * Totales.
+     */
     const total =
         items.reduce(
             (acc, currentItem) =>
@@ -380,7 +407,6 @@ function SaleForm({
             0
         );
 
-
     const subtotal =
         total / 1.16;
 
@@ -388,6 +414,9 @@ function SaleForm({
         total - subtotal;
 
 
+    /*
+     * Guardar venta.
+     */
     const handleSubmit =
         async (event) => {
 
@@ -412,6 +441,7 @@ function SaleForm({
 
                     items
                 });
+
 
                 setSale({
                     salesChannelId: "",
@@ -439,6 +469,17 @@ function SaleForm({
         };
 
 
+    /*
+     * Producto actualmente seleccionado.
+     */
+    const selectedProduct =
+        products.find(
+            product =>
+                product.id ===
+                item.productId
+        ) ?? null;
+
+
     return (
 
         <Paper sx={{ p: 3 }}>
@@ -458,6 +499,7 @@ function SaleForm({
             >
 
                 <Stack spacing={2}>
+
 
                     {/* CANAL DE VENTA */}
 
@@ -584,13 +626,11 @@ function SaleForm({
                     >
 
                         <Autocomplete
-                            options={products}
+                            options={
+                                products
+                            }
                             value={
-                                products.find(
-                                    product =>
-                                        product.id ===
-                                        item.productId
-                                ) ?? null
+                                selectedProduct
                             }
                             onChange={
                                 (_, product) =>
@@ -601,6 +641,14 @@ function SaleForm({
                             getOptionLabel={
                                 (product) =>
                                     `${product.nombre} · ${product.sku}`
+                            }
+                            isOptionEqualToValue={
+                                (
+                                    option,
+                                    value
+                                ) =>
+                                    option.id ===
+                                    value.id
                             }
                             filterOptions={
                                 (
@@ -718,10 +766,15 @@ function SaleForm({
                             sx={{
                                 whiteSpace:
                                     "nowrap",
-                                minHeight: 56,
+
+                                minHeight:
+                                    56,
+
                                 width: {
-                                    xs: "100%",
-                                    sm: "auto"
+                                    xs:
+                                        "100%",
+                                    sm:
+                                        "auto"
                                 }
                             }}
                         >
@@ -731,7 +784,7 @@ function SaleForm({
                     </Stack>
 
 
-                    {/* MENSAJES SCANNER */}
+                    {/* RESULTADO DEL SCANNER */}
 
                     {
                         scanMessage && (
@@ -775,11 +828,8 @@ function SaleForm({
                         variant="body2"
                     >
                         Stock disponible: {
-                            products.find(
-                                product =>
-                                    product.id ===
-                                    item.productId
-                            )?.stockActual ?? 0
+                            selectedProduct
+                                ?.stockActual ?? 0
                         }
                     </Typography>
 
@@ -797,14 +847,19 @@ function SaleForm({
                                 ...item,
                                 cantidad:
                                     Number(
-                                        event.target.value
+                                        event
+                                            .target
+                                            .value
                                     )
                             })
                         }
+                        inputProps={{
+                            min: 1
+                        }}
                     />
 
 
-                    {/* PRECIO */}
+                    {/* PRECIO UNITARIO */}
 
                     <TextField
                         label="Precio Unitario"
@@ -817,26 +872,35 @@ function SaleForm({
                                 ...item,
                                 precioUnitario:
                                     Number(
-                                        event.target.value
+                                        event
+                                            .target
+                                            .value
                                     )
                             })
                         }
+                        inputProps={{
+                            min: 0,
+                            step: "0.01"
+                        }}
                     />
 
 
-                    {/* AGREGAR MANUAL */}
+                    {/* AGREGAR AL CARRITO */}
 
                     <Button
                         variant="outlined"
                         onClick={
                             addItem
                         }
+                        disabled={
+                            !selectedProduct
+                        }
                     >
                         Agregar Producto
                     </Button>
 
 
-                    {/* TABLA */}
+                    {/* CARRITO */}
 
                     <Table>
 
@@ -875,7 +939,9 @@ function SaleForm({
                                         <TableRow>
 
                                             <TableCell
-                                                colSpan={4}
+                                                colSpan={
+                                                    4
+                                                }
                                                 align="center"
                                                 sx={{
                                                     py: 6
@@ -915,37 +981,43 @@ function SaleForm({
 
                                                     <TableRow
                                                         key={
-                                                            product?.id ??
+                                                            product
+                                                                ?.id ??
                                                             index
                                                         }
                                                     >
 
                                                         <TableCell>
                                                             {
-                                                                product?.nombre
+                                                                product
+                                                                    ?.nombre
                                                             }
                                                         </TableCell>
 
                                                         <TableCell>
                                                             {
-                                                                currentItem.cantidad
+                                                                currentItem
+                                                                    .cantidad
                                                             }
                                                         </TableCell>
 
                                                         <TableCell>
 
                                                             {
-                                                                new Intl.NumberFormat(
-                                                                    "es-MX",
-                                                                    {
-                                                                        style:
-                                                                            "currency",
-                                                                        currency:
-                                                                            "MXN"
-                                                                    }
-                                                                ).format(
-                                                                    currentItem.precioUnitario
-                                                                )
+                                                                new Intl
+                                                                    .NumberFormat(
+                                                                        "es-MX",
+                                                                        {
+                                                                            style:
+                                                                                "currency",
+                                                                            currency:
+                                                                                "MXN"
+                                                                        }
+                                                                    )
+                                                                    .format(
+                                                                        currentItem
+                                                                            .precioUnitario
+                                                                    )
                                                             }
 
                                                         </TableCell>
@@ -1025,7 +1097,7 @@ function SaleForm({
             </form>
 
 
-            {/* SCANNER */}
+            {/* BARCODE SCANNER */}
 
             <BarcodeScanner
                 open={
@@ -1042,5 +1114,6 @@ function SaleForm({
         </Paper>
     );
 }
+
 
 export default SaleForm;
