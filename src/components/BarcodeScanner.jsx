@@ -28,17 +28,60 @@ function BarcodeScanner({
 
     const videoRef = useRef(null);
     const controlsRef = useRef(null);
+
+    /*
+     * Aquí recordamos la cámara que funcionó.
+     * NO se pierde al cerrar el Dialog.
+     */
+    const preferredDeviceIdRef = useRef(null);
+
+    /*
+     * Evita que un cambio de referencia de
+     * onDetected reinicie el scanner.
+     */
     const onDetectedRef = useRef(onDetected);
 
     const [error, setError] = useState("");
 
-    /*
-     * Conservamos siempre la última versión
-     * del callback sin reiniciar la cámara.
-     */
     useEffect(() => {
+
         onDetectedRef.current = onDetected;
+
     }, [onDetected]);
+
+    /*
+     * Apaga completamente la cámara.
+     */
+    const stopScanner = () => {
+
+        if (controlsRef.current) {
+
+            try {
+                controlsRef.current.stop();
+            } catch (stopError) {
+                console.warn(
+                    "Error deteniendo ZXing:",
+                    stopError
+                );
+            }
+
+            controlsRef.current = null;
+        }
+
+        const stream =
+            videoRef.current?.srcObject;
+
+        if (stream) {
+
+            stream
+                .getTracks()
+                .forEach((track) => {
+                    track.stop();
+                });
+
+            videoRef.current.srcObject = null;
+        }
+    };
 
     useEffect(() => {
 
@@ -54,9 +97,6 @@ function BarcodeScanner({
 
                 setError("");
 
-                /*
-                 * Solo buscamos códigos comerciales.
-                 */
                 const hints = new Map();
 
                 hints.set(
@@ -80,34 +120,54 @@ function BarcodeScanner({
                     );
 
                 /*
-                 * Obtenemos las cámaras disponibles.
+                 * Si ya tenemos una cámara que funcionó,
+                 * NO volvemos a seleccionar otra.
                  */
-                const devices =
-                    await BrowserMultiFormatReader
-                        .listVideoInputDevices();
+                let deviceId =
+                    preferredDeviceIdRef.current;
 
-                if (!devices.length) {
-                    throw new Error(
-                        "No se encontró una cámara disponible."
+                if (!deviceId) {
+
+                    const devices =
+                        await BrowserMultiFormatReader
+                            .listVideoInputDevices();
+
+                    if (!devices.length) {
+
+                        throw new Error(
+                            "No se encontró una cámara disponible."
+                        );
+                    }
+
+                    /*
+                     * Solo hacemos esta selección
+                     * durante la primera apertura.
+                     */
+                    const selectedDevice =
+                        devices[devices.length - 1];
+
+                    deviceId =
+                        selectedDevice.deviceId;
+
+                    preferredDeviceIdRef.current =
+                        deviceId;
+
+                    console.log(
+                        "Cámara inicial seleccionada:",
+                        selectedDevice.label
+                    );
+
+                } else {
+
+                    console.log(
+                        "Reutilizando cámara:",
+                        deviceId
                     );
                 }
 
-                /*
-                 * Esta es la estrategia que YA comprobamos
-                 * que abre correctamente la cámara
-                 * y reconoce el primer barcode.
-                 */
-                const selectedDevice =
-                    devices[devices.length - 1];
-
-                console.log(
-                    "CAMARA SELECCIONADA:",
-                    selectedDevice
-                );
-
                 const controls =
                     await codeReader.decodeFromVideoDevice(
-                        selectedDevice.deviceId,
+                        deviceId,
                         videoRef.current,
                         (
                             result,
@@ -116,34 +176,74 @@ function BarcodeScanner({
                         ) => {
 
                             if (
-                                result &&
-                                active
+                                !result ||
+                                !active
                             ) {
+                                return;
+                            }
 
-                                const code =
-                                    result.getText();
+                            /*
+                             * Bloqueamos nuevas lecturas.
+                             */
+                            active = false;
 
-                                console.log(
-                                    "BARCODE DETECTADO:",
-                                    code
-                                );
+                            const code =
+                                result.getText();
 
-                                active = false;
+                            console.log(
+                                "BARCODE DETECTADO:",
+                                code
+                            );
 
+                            /*
+                             * Apagamos ZXing.
+                             */
+                            try {
                                 scannerControls.stop();
-
-                                controlsRef.current = null;
-
-                                onDetectedRef.current(
-                                    code
+                            } catch (stopError) {
+                                console.warn(
+                                    "Error deteniendo scanner:",
+                                    stopError
                                 );
                             }
+
+                            controlsRef.current =
+                                null;
+
+                            /*
+                             * Apagamos explícitamente
+                             * todos los tracks.
+                             */
+                            const stream =
+                                videoRef.current?.srcObject;
+
+                            if (stream) {
+
+                                stream
+                                    .getTracks()
+                                    .forEach(
+                                        (track) => {
+                                            track.stop();
+                                        }
+                                    );
+
+                                videoRef.current.srcObject =
+                                    null;
+                            }
+
+                            /*
+                             * Ya con la cámara apagada,
+                             * notificamos al ProductForm.
+                             */
+                            onDetectedRef.current(
+                                code
+                            );
                         }
                     );
 
                 /*
-                 * Si el modal fue cerrado mientras
-                 * arrancaba la cámara, detenemos.
+                 * El usuario pudo cerrar el modal
+                 * mientras arrancaba getUserMedia().
                  */
                 if (!active) {
 
@@ -156,52 +256,36 @@ function BarcodeScanner({
                     controls;
 
                 /*
-                 * DEBUG
+                 * Guardamos el deviceId REAL del track
+                 * que terminó usando Safari.
                  *
-                 * Esperamos un segundo para darle tiempo
-                 * al navegador de configurar completamente
-                 * la cámara.
+                 * Esto es mejor que confiar únicamente
+                 * en el deviceId solicitado.
                  */
-                setTimeout(() => {
+                const stream =
+                    videoRef.current?.srcObject;
 
-                    if (!active) {
-                        return;
-                    }
+                const videoTrack =
+                    stream
+                        ?.getVideoTracks()
+                        ?.[0];
 
-                    const stream =
-                        videoRef.current?.srcObject;
+                if (videoTrack) {
 
-                    const track =
-                        stream
-                            ?.getVideoTracks()
-                            ?.[0];
-
-                    if (!track) {
-                        return;
-                    }
+                    const settings =
+                        videoTrack.getSettings();
 
                     console.log(
-                        "CAMERA SETTINGS:",
-                        track.getSettings()
+                        "Configuración real:",
+                        settings
                     );
 
-                    if (track.getCapabilities) {
+                    if (settings.deviceId) {
 
-                        console.log(
-                            "CAMERA CAPABILITIES:",
-                            track.getCapabilities()
-                        );
+                        preferredDeviceIdRef.current =
+                            settings.deviceId;
                     }
-
-                    if (track.getConstraints) {
-
-                        console.log(
-                            "CAMERA CONSTRAINTS:",
-                            track.getConstraints()
-                        );
-                    }
-
-                }, 1000);
+                }
 
             } catch (scannerError) {
 
@@ -226,44 +310,14 @@ function BarcodeScanner({
 
             active = false;
 
-            if (controlsRef.current) {
-
-                try {
-
-                    controlsRef.current.stop();
-
-                } catch (stopError) {
-
-                    console.warn(
-                        "Error deteniendo scanner:",
-                        stopError
-                    );
-                }
-
-                controlsRef.current = null;
-            }
+            stopScanner();
         };
 
     }, [open]);
 
     const handleClose = () => {
 
-        if (controlsRef.current) {
-
-            try {
-
-                controlsRef.current.stop();
-
-            } catch (stopError) {
-
-                console.warn(
-                    "Error deteniendo scanner:",
-                    stopError
-                );
-            }
-
-            controlsRef.current = null;
-        }
+        stopScanner();
 
         onClose();
     };
@@ -286,27 +340,21 @@ function BarcodeScanner({
                 <Typography
                     variant="body2"
                     color="text.secondary"
-                    sx={{
-                        mb: 2
-                    }}
+                    sx={{ mb: 2 }}
                 >
                     Coloca el código de barras completo
                     dentro del recuadro.
                 </Typography>
 
-                {
-                    error && (
+                {error && (
 
-                        <Alert
-                            severity="error"
-                            sx={{
-                                mb: 2
-                            }}
-                        >
-                            {error}
-                        </Alert>
-                    )
-                }
+                    <Alert
+                        severity="error"
+                        sx={{ mb: 2 }}
+                    >
+                        {error}
+                    </Alert>
+                )}
 
                 <Box
                     sx={{
@@ -331,46 +379,42 @@ function BarcodeScanner({
                         }}
                     />
 
-                    {
-                        !error && (
+                    {!error && (
 
-                            <Box
-                                sx={{
-                                    position: "absolute",
-                                    top: "50%",
-                                    left: "50%",
-                                    transform:
-                                        "translate(-50%, -50%)",
-                                    width: "85%",
-                                    height: 110,
-                                    border:
-                                        "2px solid white",
-                                    borderRadius: 2,
-                                    pointerEvents: "none"
-                                }}
-                            />
-                        )
-                    }
+                        <Box
+                            sx={{
+                                position: "absolute",
+                                top: "50%",
+                                left: "50%",
+                                transform:
+                                    "translate(-50%, -50%)",
+                                width: "85%",
+                                height: 110,
+                                border:
+                                    "2px solid white",
+                                borderRadius: 2,
+                                pointerEvents: "none"
+                            }}
+                        />
+                    )}
 
                 </Box>
 
-                {
-                    !error && (
+                {!error && (
 
-                        <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{
-                                display: "block",
-                                textAlign: "center",
-                                mt: 1
-                            }}
-                        >
-                            Mantén el código completo,
-                            bien iluminado y enfocado.
-                        </Typography>
-                    )
-                }
+                    <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{
+                            display: "block",
+                            textAlign: "center",
+                            mt: 1
+                        }}
+                    >
+                        Mantén el código completo,
+                        bien iluminado y enfocado.
+                    </Typography>
+                )}
 
             </DialogContent>
 
