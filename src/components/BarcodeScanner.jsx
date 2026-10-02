@@ -29,29 +29,37 @@ function BarcodeScanner({
     const videoRef = useRef(null);
 
     /*
-     * Guardamos los controles de la sesión
-     * de cámara actualmente activa.
+     * Stream de cámara.
+     *
+     * IMPORTANTE:
+     * Lo conservamos entre aperturas del Dialog.
+     */
+    const streamRef = useRef(null);
+
+    /*
+     * Controles de la sesión de lectura ZXing.
      */
     const controlsRef = useRef(null);
 
     /*
-     * Evitamos que cambios en la referencia
-     * de onDetected reinicien la cámara.
+     * Reader único.
+     */
+    const readerRef = useRef(null);
+
+    /*
+     * Callback actualizado sin provocar
+     * reinicios de cámara.
      */
     const onDetectedRef = useRef(onDetected);
 
     /*
-     * Creamos UNA sola instancia del reader
-     * durante la vida del componente.
+     * Evita procesar dos veces el mismo
+     * resultado durante una apertura.
      */
-    const readerRef = useRef(null);
+    const detectedRef = useRef(false);
 
     const [error, setError] = useState("");
 
-    /*
-     * Actualizamos el callback sin tocar
-     * el scanner.
-     */
     useEffect(() => {
 
         onDetectedRef.current = onDetected;
@@ -87,173 +95,240 @@ function BarcodeScanner({
     }
 
     /*
-     * ÚNICA forma en que detenemos
-     * una sesión de cámara.
+     * PAUSAR cámara.
      *
-     * Dejamos que ZXing administre
-     * el MediaStream.
+     * No hacemos track.stop().
+     *
+     * El MediaStream continúa existiendo,
+     * pero deja de entregar frames.
      */
-    const stopScanner = () => {
+    const pauseCamera = () => {
+
+        if (!streamRef.current) {
+            return;
+        }
+
+        streamRef.current
+            .getVideoTracks()
+            .forEach((track) => {
+
+                track.enabled = false;
+
+            });
+    };
+
+    /*
+     * REACTIVAR la misma cámara.
+     */
+    const resumeCamera = () => {
+
+        if (!streamRef.current) {
+            return;
+        }
+
+        streamRef.current
+            .getVideoTracks()
+            .forEach((track) => {
+
+                track.enabled = true;
+
+            });
+    };
+
+    /*
+     * Detenemos únicamente el proceso
+     * de decodificación de ZXing.
+     *
+     * NO destruimos el MediaStream.
+     */
+    const stopDecoding = () => {
 
         if (!controlsRef.current) {
             return;
         }
 
-        try {
-
-            controlsRef.current.stop();
-
-        } catch (stopError) {
-
-            console.warn(
-                "Error deteniendo scanner:",
-                stopError
-            );
-        }
+        /*
+         * OJO:
+         *
+         * No usamos controls.stop() aquí,
+         * porque puede detener también
+         * el MediaStream que queremos conservar.
+         */
 
         controlsRef.current = null;
     };
 
-    useEffect(() => {
+    /*
+     * Primera inicialización de la cámara.
+     */
+    const initializeCamera = async () => {
 
-        /*
-         * Si cerramos el Dialog,
-         * detenemos la sesión activa.
-         */
-        if (!open) {
+        const devices =
+            await BrowserMultiFormatReader
+                .listVideoInputDevices();
 
-            stopScanner();
+        if (!devices.length) {
 
-            return;
+            throw new Error(
+                "No se encontró una cámara disponible."
+            );
         }
 
-        let active = true;
+        const selectedDevice =
+            devices[devices.length - 1];
 
-        const startScanner = async () => {
+        console.log(
+            "Inicializando cámara:",
+            selectedDevice.label
+        );
+
+        /*
+         * Creamos nosotros el MediaStream.
+         *
+         * De esta manera podemos conservarlo
+         * aunque el Dialog se cierre.
+         */
+        const stream =
+            await navigator.mediaDevices.getUserMedia({
+                audio: false,
+                video: {
+                    deviceId: {
+                        exact:
+                            selectedDevice.deviceId
+                    }
+                }
+            });
+
+        streamRef.current =
+            stream;
+
+        return stream;
+    };
+
+    /*
+     * Inicia ZXing utilizando nuestro
+     * MediaStream existente.
+     */
+    const startDecoding = async () => {
+
+        detectedRef.current = false;
+
+        const codeReader =
+            readerRef.current;
+
+        /*
+         * Obtenemos el track que YA tenemos.
+         */
+        const track =
+            streamRef.current
+                ?.getVideoTracks()?.[0];
+
+        if (!track) {
+
+            throw new Error(
+                "No existe un stream de cámara activo."
+            );
+        }
+
+        /*
+         * ZXing necesita constraints.
+         *
+         * Como reutilizamos el mismo deviceId,
+         * Safari debería mantener exactamente
+         * la misma cámara.
+         */
+        const settings =
+            track.getSettings();
+
+        const deviceId =
+            settings.deviceId;
+
+        const controls =
+            await codeReader.decodeFromVideoDevice(
+                deviceId,
+                videoRef.current,
+                (
+                    result,
+                    decodeError,
+                    scannerControls
+                ) => {
+
+                    if (
+                        !result ||
+                        detectedRef.current
+                    ) {
+                        return;
+                    }
+
+                    detectedRef.current = true;
+
+                    const code =
+                        result.getText();
+
+                    console.log(
+                        "BARCODE DETECTADO:",
+                        code
+                    );
+
+                    /*
+                     * NO destruimos la cámara.
+                     *
+                     * Simplemente dejamos de entregar
+                     * frames.
+                     */
+                    pauseCamera();
+
+                    onDetectedRef.current(
+                        code
+                    );
+                }
+            );
+
+        controlsRef.current =
+            controls;
+    };
+
+    /*
+     * Abrir / cerrar Dialog.
+     */
+    useEffect(() => {
+
+        let cancelled = false;
+
+        const handleOpen = async () => {
+
+            if (!open) {
+
+                pauseCamera();
+
+                return;
+            }
 
             try {
 
                 setError("");
 
-                const codeReader =
-                    readerRef.current;
-
                 /*
-                 * Obtenemos las cámaras disponibles.
+                 * Primera apertura:
+                 * todavía no existe cámara.
                  */
-                const devices =
-                    await BrowserMultiFormatReader
-                        .listVideoInputDevices();
+                if (!streamRef.current) {
 
-                if (!devices.length) {
+                    await initializeCamera();
 
-                    throw new Error(
-                        "No se encontró una cámara disponible."
-                    );
+                    if (cancelled) {
+                        return;
+                    }
                 }
 
                 /*
-                 * Por ahora mantenemos la selección
-                 * que sabemos que en la primera
-                 * apertura funciona correctamente.
+                 * Segunda, tercera, cuarta...
+                 * simplemente reactivamos el mismo
+                 * MediaStream.
                  */
-                const selectedDevice =
-                    devices[devices.length - 1];
+                resumeCamera();
 
-                console.log(
-                    "Iniciando cámara:",
-                    selectedDevice.label
-                );
-
-                const controls =
-                    await codeReader.decodeFromVideoDevice(
-                        selectedDevice.deviceId,
-                        videoRef.current,
-                        (
-                            result,
-                            decodeError,
-                            scannerControls
-                        ) => {
-
-                            /*
-                             * ZXing llama este callback
-                             * continuamente.
-                             *
-                             * Que no haya resultado en un
-                             * frame es completamente normal.
-                             */
-                            if (
-                                !result ||
-                                !active
-                            ) {
-                                return;
-                            }
-
-                            /*
-                             * Impedimos una segunda lectura
-                             * de la misma sesión.
-                             */
-                            active = false;
-
-                            const code =
-                                result.getText();
-
-                            console.log(
-                                "BARCODE DETECTADO:",
-                                code
-                            );
-
-                            /*
-                             * IMPORTANTE:
-                             *
-                             * Solo usamos los controles
-                             * proporcionados por ZXing.
-                             *
-                             * No tocamos srcObject.
-                             * No hacemos track.stop().
-                             */
-                            try {
-
-                                scannerControls.stop();
-
-                            } catch (stopError) {
-
-                                console.warn(
-                                    "Error deteniendo cámara:",
-                                    stopError
-                                );
-                            }
-
-                            controlsRef.current =
-                                null;
-
-                            /*
-                             * Avisamos al padre.
-                             *
-                             * ProductForm cambiará open
-                             * a false después de recibir
-                             * el código.
-                             */
-                            onDetectedRef.current(
-                                code
-                            );
-                        }
-                    );
-
-                /*
-                 * Puede ocurrir que el usuario cierre
-                 * el modal mientras Safari todavía
-                 * estaba abriendo la cámara.
-                 */
-                if (!active) {
-
-                    controls.stop();
-
-                    return;
-                }
-
-                controlsRef.current =
-                    controls;
+                await startDecoding();
 
             } catch (scannerError) {
 
@@ -262,34 +337,75 @@ function BarcodeScanner({
                     scannerError
                 );
 
-                if (active) {
+                if (!cancelled) {
 
                     setError(
                         "No fue posible iniciar la cámara. " +
-                        "Revisa los permisos e inténtalo nuevamente."
+                        "Revisa los permisos del navegador."
                     );
                 }
             }
         };
 
-        startScanner();
+        handleOpen();
 
-        /*
-         * Cuando open cambia o el componente
-         * desaparece, detenemos mediante ZXing.
-         */
         return () => {
 
-            active = false;
+            cancelled = true;
 
-            stopScanner();
+            /*
+             * IMPORTANTE:
+             * aquí tampoco hacemos stop().
+             */
+            pauseCamera();
         };
 
     }, [open]);
 
+    /*
+     * Al destruir BarcodeScanner por completo
+     * SÍ liberamos físicamente la cámara.
+     */
+    useEffect(() => {
+
+        return () => {
+
+            if (controlsRef.current) {
+
+                try {
+
+                    controlsRef.current.stop();
+
+                } catch (error) {
+
+                    console.warn(
+                        "Error cerrando ZXing:",
+                        error
+                    );
+                }
+
+                controlsRef.current = null;
+            }
+
+            if (streamRef.current) {
+
+                streamRef.current
+                    .getTracks()
+                    .forEach((track) => {
+
+                        track.stop();
+
+                    });
+
+                streamRef.current = null;
+            }
+        };
+
+    }, []);
+
     const handleClose = () => {
 
-        stopScanner();
+        pauseCamera();
 
         onClose();
     };
