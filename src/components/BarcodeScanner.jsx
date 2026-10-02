@@ -33,61 +33,16 @@ function BarcodeScanner({
     const [error, setError] = useState("");
 
     /*
-     * Conservamos siempre el callback más reciente
-     * sin provocar que la cámara se reinicie.
+     * Conservamos siempre la última versión
+     * del callback sin reiniciar la cámara.
      */
     useEffect(() => {
-
         onDetectedRef.current = onDetected;
-
     }, [onDetected]);
-
-    /*
-     * Detiene por completo cualquier cámara
-     * que esté actualmente asociada al scanner.
-     */
-    const stopScanner = () => {
-
-        if (controlsRef.current) {
-
-            try {
-
-                controlsRef.current.stop();
-
-            } catch (stopError) {
-
-                console.warn(
-                    "Error deteniendo scanner:",
-                    stopError
-                );
-            }
-
-            controlsRef.current = null;
-        }
-
-        if (videoRef.current?.srcObject) {
-
-            const stream =
-                videoRef.current.srcObject;
-
-            stream
-                .getTracks()
-                .forEach((track) => {
-
-                    track.stop();
-
-                });
-
-            videoRef.current.srcObject = null;
-        }
-    };
 
     useEffect(() => {
 
         if (!open) {
-
-            stopScanner();
-
             return;
         }
 
@@ -100,15 +55,7 @@ function BarcodeScanner({
                 setError("");
 
                 /*
-                 * Por seguridad eliminamos cualquier
-                 * stream anterior antes de solicitar
-                 * uno nuevo.
-                 */
-                stopScanner();
-
-                /*
-                 * Limitamos ZXing a los códigos que
-                 * normalmente encontraremos en productos.
+                 * Solo buscamos códigos comerciales.
                  */
                 const hints = new Map();
 
@@ -133,35 +80,34 @@ function BarcodeScanner({
                     );
 
                 /*
-                 * Ya NO seleccionamos manualmente una
-                 * cámara por deviceId.
-                 *
-                 * Dejamos que el navegador elija la
-                 * cámara trasera apropiada.
+                 * Obtenemos las cámaras disponibles.
                  */
-                const constraints = {
+                const devices =
+                    await BrowserMultiFormatReader
+                        .listVideoInputDevices();
 
-                    audio: false,
+                if (!devices.length) {
+                    throw new Error(
+                        "No se encontró una cámara disponible."
+                    );
+                }
 
-                    video: {
+                /*
+                 * Esta es la estrategia que YA comprobamos
+                 * que abre correctamente la cámara
+                 * y reconoce el primer barcode.
+                 */
+                const selectedDevice =
+                    devices[devices.length - 1];
 
-                        facingMode: {
-                            ideal: "environment"
-                        },
-
-                        width: {
-                            ideal: 1280
-                        },
-
-                        height: {
-                            ideal: 720
-                        }
-                    }
-                };
+                console.log(
+                    "CAMARA SELECCIONADA:",
+                    selectedDevice
+                );
 
                 const controls =
-                    await codeReader.decodeFromConstraints(
-                        constraints,
+                    await codeReader.decodeFromVideoDevice(
+                        selectedDevice.deviceId,
                         videoRef.current,
                         (
                             result,
@@ -174,8 +120,6 @@ function BarcodeScanner({
                                 active
                             ) {
 
-                                active = false;
-
                                 const code =
                                     result.getText();
 
@@ -184,44 +128,12 @@ function BarcodeScanner({
                                     code
                                 );
 
-                                /*
-                                 * Primero detenemos ZXing.
-                                 */
+                                active = false;
+
                                 scannerControls.stop();
 
-                                controlsRef.current =
-                                    null;
+                                controlsRef.current = null;
 
-                                /*
-                                 * También detenemos el
-                                 * MediaStream explícitamente.
-                                 */
-                                if (
-                                    videoRef.current
-                                        ?.srcObject
-                                ) {
-
-                                    const stream =
-                                        videoRef.current
-                                            .srcObject;
-
-                                    stream
-                                        .getTracks()
-                                        .forEach(
-                                            (track) => {
-
-                                                track.stop();
-                                            }
-                                        );
-
-                                    videoRef.current
-                                        .srcObject = null;
-                                }
-
-                                /*
-                                 * Finalmente avisamos al
-                                 * ProductForm.
-                                 */
                                 onDetectedRef.current(
                                     code
                                 );
@@ -230,9 +142,8 @@ function BarcodeScanner({
                     );
 
                 /*
-                 * Si el modal se cerró mientras
-                 * getUserMedia estaba arrancando,
-                 * detenemos inmediatamente.
+                 * Si el modal fue cerrado mientras
+                 * arrancaba la cámara, detenemos.
                  */
                 if (!active) {
 
@@ -245,27 +156,52 @@ function BarcodeScanner({
                     controls;
 
                 /*
-                 * DEBUG:
-                 * imprimimos la configuración real
-                 * elegida por el navegador.
+                 * DEBUG
+                 *
+                 * Esperamos un segundo para darle tiempo
+                 * al navegador de configurar completamente
+                 * la cámara.
                  */
-                if (
-                    videoRef.current?.srcObject
-                ) {
+                setTimeout(() => {
 
-                    const videoTrack =
-                        videoRef.current
-                            .srcObject
-                            .getVideoTracks()[0];
+                    if (!active) {
+                        return;
+                    }
 
-                    if (videoTrack) {
+                    const stream =
+                        videoRef.current?.srcObject;
+
+                    const track =
+                        stream
+                            ?.getVideoTracks()
+                            ?.[0];
+
+                    if (!track) {
+                        return;
+                    }
+
+                    console.log(
+                        "CAMERA SETTINGS:",
+                        track.getSettings()
+                    );
+
+                    if (track.getCapabilities) {
 
                         console.log(
-                            "CONFIGURACIÓN CÁMARA:",
-                            videoTrack.getSettings()
+                            "CAMERA CAPABILITIES:",
+                            track.getCapabilities()
                         );
                     }
-                }
+
+                    if (track.getConstraints) {
+
+                        console.log(
+                            "CAMERA CONSTRAINTS:",
+                            track.getConstraints()
+                        );
+                    }
+
+                }, 1000);
 
             } catch (scannerError) {
 
@@ -290,14 +226,44 @@ function BarcodeScanner({
 
             active = false;
 
-            stopScanner();
+            if (controlsRef.current) {
+
+                try {
+
+                    controlsRef.current.stop();
+
+                } catch (stopError) {
+
+                    console.warn(
+                        "Error deteniendo scanner:",
+                        stopError
+                    );
+                }
+
+                controlsRef.current = null;
+            }
         };
 
     }, [open]);
 
     const handleClose = () => {
 
-        stopScanner();
+        if (controlsRef.current) {
+
+            try {
+
+                controlsRef.current.stop();
+
+            } catch (stopError) {
+
+                console.warn(
+                    "Error deteniendo scanner:",
+                    stopError
+                );
+            }
+
+            controlsRef.current = null;
+        }
 
         onClose();
     };
