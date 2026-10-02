@@ -97,6 +97,47 @@ function BarcodeScanner({
             });
     };
 
+    const destroyCamera = () => {
+
+        /*
+         * Detenemos la lectura de ZXing.
+         */
+        if (scanControlsRef.current) {
+
+            try {
+                scanControlsRef.current.stop();
+            } catch (stopError) {
+                console.warn(
+                    "Error deteniendo ZXing:",
+                    stopError
+                );
+            }
+
+            scanControlsRef.current = null;
+        }
+
+        /*
+         * Liberamos físicamente el MediaStream.
+         */
+        if (streamRef.current) {
+
+            streamRef.current
+                .getTracks()
+                .forEach((track) => {
+                    track.stop();
+                });
+
+            streamRef.current = null;
+        }
+
+        /*
+         * Desconectamos el video del stream anterior.
+         */
+        if (videoRef.current) {
+            videoRef.current.srcObject = null;
+        }
+    };
+
     /*
      * Reactiva exactamente el mismo track.
      */
@@ -246,7 +287,7 @@ function BarcodeScanner({
              */
             if (!open) {
 
-                pauseCamera();
+                destroyCamera();
 
                 return;
             }
