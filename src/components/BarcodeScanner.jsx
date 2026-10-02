@@ -28,12 +28,60 @@ function BarcodeScanner({
 
     const videoRef = useRef(null);
     const controlsRef = useRef(null);
+    const onDetectedRef = useRef(onDetected);
 
     const [error, setError] = useState("");
+
+    /*
+     * Conservamos siempre la versión más reciente
+     * del callback sin reiniciar la cámara.
+     */
+    useEffect(() => {
+        onDetectedRef.current = onDetected;
+    }, [onDetected]);
+
+    /*
+     * Detiene completamente el scanner actual.
+     */
+    const stopScanner = () => {
+
+        if (controlsRef.current) {
+
+            try {
+                controlsRef.current.stop();
+            } catch (error) {
+                console.warn(
+                    "Error deteniendo scanner:",
+                    error
+                );
+            }
+
+            controlsRef.current = null;
+        }
+
+        /*
+         * Como seguridad adicional detenemos
+         * cualquier MediaStream conectado al video.
+         */
+        if (videoRef.current?.srcObject) {
+
+            const stream =
+                videoRef.current.srcObject;
+
+            stream
+                .getTracks()
+                .forEach((track) => {
+                    track.stop();
+                });
+
+            videoRef.current.srcObject = null;
+        }
+    };
 
     useEffect(() => {
 
         if (!open) {
+            stopScanner();
             return;
         }
 
@@ -46,10 +94,11 @@ function BarcodeScanner({
                 setError("");
 
                 /*
-                 * Solo buscamos códigos comerciales
-                 * que normalmente encontraremos
-                 * en los productos de la tienda.
+                 * Nos aseguramos de no conservar
+                 * una cámara anterior.
                  */
+                stopScanner();
+
                 const hints = new Map();
 
                 hints.set(
@@ -72,27 +121,17 @@ function BarcodeScanner({
                         hints
                     );
 
-                /*
-                 * Obtenemos las cámaras disponibles.
-                 */
                 const devices =
                     await BrowserMultiFormatReader
                         .listVideoInputDevices();
 
                 if (!devices.length) {
+
                     throw new Error(
                         "No se encontró una cámara disponible."
                     );
                 }
 
-                /*
-                 * Primera aproximación:
-                 * en móvil/iPad normalmente la última
-                 * cámara corresponde a una cámara trasera.
-                 *
-                 * Después podemos mejorar esto para solicitar
-                 * explícitamente facingMode: environment.
-                 */
                 const selectedDevice =
                     devices[devices.length - 1];
 
@@ -108,13 +147,15 @@ function BarcodeScanner({
                         (
                             result,
                             decodeError,
-                            controls
+                            scannerControls
                         ) => {
 
                             if (
                                 result &&
                                 active
                             ) {
+
+                                active = false;
 
                                 const code =
                                     result.getText();
@@ -124,22 +165,37 @@ function BarcodeScanner({
                                     code
                                 );
 
-                                active = false;
+                                /*
+                                 * Primero detenemos
+                                 * completamente la cámara.
+                                 */
+                                scannerControls.stop();
 
-                                controls.stop();
+                                controlsRef.current =
+                                    null;
 
-                                onDetected(code);
+                                /*
+                                 * Después notificamos
+                                 * al componente padre.
+                                 */
+                                onDetectedRef.current(
+                                    code
+                                );
                             }
-
-                            /*
-                             * No mostramos decodeError.
-                             *
-                             * ZXing genera errores continuamente
-                             * mientras un frame no contiene un
-                             * código legible. Eso es normal.
-                             */
                         }
                     );
+
+                /*
+                 * Puede ocurrir que hayamos cerrado
+                 * el modal mientras esperábamos
+                 * a que iniciara la cámara.
+                 */
+                if (!active) {
+
+                    controls.stop();
+
+                    return;
+                }
 
                 controlsRef.current =
                     controls;
@@ -163,35 +219,18 @@ function BarcodeScanner({
 
         startScanner();
 
-        /*
-         * Cleanup.
-         *
-         * Importantísimo para que la cámara
-         * no permanezca encendida después
-         * de cerrar el modal.
-         */
         return () => {
 
             active = false;
 
-            if (controlsRef.current) {
-
-                controlsRef.current.stop();
-
-                controlsRef.current = null;
-            }
+            stopScanner();
         };
 
-    }, [open, onDetected]);
+    }, [open]);
 
     const handleClose = () => {
 
-        if (controlsRef.current) {
-
-            controlsRef.current.stop();
-
-            controlsRef.current = null;
-        }
+        stopScanner();
 
         onClose();
     };
@@ -214,27 +253,21 @@ function BarcodeScanner({
                 <Typography
                     variant="body2"
                     color="text.secondary"
-                    sx={{
-                        mb: 2
-                    }}
+                    sx={{ mb: 2 }}
                 >
-                    Coloca el código de barras
-                    completo dentro del recuadro.
+                    Coloca el código de barras completo
+                    dentro del recuadro.
                 </Typography>
 
-                {
-                    error && (
+                {error && (
 
-                        <Alert
-                            severity="error"
-                            sx={{
-                                mb: 2
-                            }}
-                        >
-                            {error}
-                        </Alert>
-                    )
-                }
+                    <Alert
+                        severity="error"
+                        sx={{ mb: 2 }}
+                    >
+                        {error}
+                    </Alert>
+                )}
 
                 <Box
                     sx={{
@@ -250,6 +283,7 @@ function BarcodeScanner({
                         ref={videoRef}
                         muted
                         playsInline
+                        autoPlay
                         style={{
                             width: "100%",
                             display: "block",
@@ -258,46 +292,42 @@ function BarcodeScanner({
                         }}
                     />
 
-                    {
-                        !error && (
+                    {!error && (
 
-                            <Box
-                                sx={{
-                                    position: "absolute",
-                                    top: "50%",
-                                    left: "50%",
-                                    transform:
-                                        "translate(-50%, -50%)",
-                                    width: "85%",
-                                    height: 110,
-                                    border:
-                                        "2px solid white",
-                                    borderRadius: 2,
-                                    pointerEvents: "none"
-                                }}
-                            />
-                        )
-                    }
+                        <Box
+                            sx={{
+                                position: "absolute",
+                                top: "50%",
+                                left: "50%",
+                                transform:
+                                    "translate(-50%, -50%)",
+                                width: "85%",
+                                height: 110,
+                                border:
+                                    "2px solid white",
+                                borderRadius: 2,
+                                pointerEvents: "none"
+                            }}
+                        />
+                    )}
 
                 </Box>
 
-                {
-                    !error && (
+                {!error && (
 
-                        <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{
-                                display: "block",
-                                textAlign: "center",
-                                mt: 1
-                            }}
-                        >
-                            Mantén el código completo,
-                            bien iluminado y enfocado.
-                        </Typography>
-                    )
-                }
+                    <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{
+                            display: "block",
+                            textAlign: "center",
+                            mt: 1
+                        }}
+                    >
+                        Mantén el código completo,
+                        bien iluminado y enfocado.
+                    </Typography>
+                )}
 
             </DialogContent>
 
