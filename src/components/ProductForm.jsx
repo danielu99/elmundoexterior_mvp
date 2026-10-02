@@ -11,18 +11,22 @@ import {
 } from "@mui/material";
 
 import { createProduct } from "../services/productService";
+import BarcodeScanner from "./BarcodeScanner";
 
 function ProductForm({ onProductCreated }) {
 
     const [form, setForm] = useState({
-        sku: "",
         nombre: "",
+        codigoBarras: "",
         cantidadInicial: "",
         costoUnitario: "",
         margenDeseado: "",
         precioFinal: "",
         compraFacturada: false
     });
+
+    const [scannerOpen, setScannerOpen] =
+        useState(false);
 
     const handleChange = (event) => {
 
@@ -55,8 +59,9 @@ function ProductForm({ onProductCreated }) {
         try {
 
             await createProduct({
-                sku: form.sku,
                 nombre: form.nombre,
+                codigoBarras:
+                    form.codigoBarras.trim() || null,
                 cantidadInicial:
                     Number(form.cantidadInicial),
                 costoUnitario:
@@ -70,8 +75,8 @@ function ProductForm({ onProductCreated }) {
             });
 
             setForm({
-                sku: "",
                 nombre: "",
+                codigoBarras: "",
                 cantidadInicial: "",
                 costoUnitario: "",
                 margenDeseado: "",
@@ -104,13 +109,12 @@ function ProductForm({ onProductCreated }) {
 
                 <Stack spacing={2}>
 
-                    <TextField
-                        label="SKU"
-                        name="sku"
-                        value={form.sku}
-                        onChange={handleChange}
-                        required
-                    />
+                    <Typography
+                        variant="body2"
+                        color="text.secondary"
+                    >
+                        El SKU se generará automáticamente al guardar.
+                    </Typography>
 
                     <TextField
                         label="Nombre"
@@ -119,6 +123,43 @@ function ProductForm({ onProductCreated }) {
                         onChange={handleChange}
                         required
                     />
+                    <Stack
+                        direction={{
+                            xs: "column",
+                            sm: "row"
+                        }}
+                        spacing={1}>
+                        <TextField
+                            label="Código de barras"
+                            name="codigoBarras"
+                            value={form.codigoBarras}
+                            onChange={handleChange}
+                            placeholder="Escanea o captura el código"
+                            inputProps={{
+                                inputMode: "numeric"
+                            }}
+                            helperText={
+                                "Opcional. Puedes capturarlo manualmente o escanearlo."
+                            }
+                            fullWidth
+                        />
+                        <Button
+                            variant="outlined"
+                            onClick={() =>
+                                setScannerOpen(true)
+                            }
+                            sx={{
+                                whiteSpace: "nowrap",
+                                alignSelf: {
+                                    xs: "stretch",
+                                    sm: "flex-start"
+                                },
+                                minHeight: 56
+                            }}
+                        >
+                            📷 Escanear
+                        </Button>
+                    </Stack>
 
                     <TextField
                         label="Cantidad Inicial"
@@ -221,6 +262,22 @@ function ProductForm({ onProductCreated }) {
                 </Stack>
 
             </form>
+
+            <BarcodeScanner
+                open={scannerOpen}
+                onClose={() =>
+                    setScannerOpen(false)
+                }
+                onDetected={(code) => {
+
+                    setForm((currentForm) => ({
+                        ...currentForm,
+                        codigoBarras: code
+                    }));
+
+                    setScannerOpen(false);
+                }}
+            />
 
         </Paper>
 

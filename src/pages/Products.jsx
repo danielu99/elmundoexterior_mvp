@@ -68,6 +68,8 @@ function Products() {
 
                             <TableCell>SKU</TableCell>
 
+                            <TableCell>Código de barras</TableCell>
+
                             <TableCell>Nombre</TableCell>
 
                             <TableCell>Costo Promedio</TableCell>
@@ -94,6 +96,10 @@ function Products() {
 
                                 <TableCell>
                                     {product.sku}
+                                </TableCell>
+
+                                <TableCell>
+                                    {product.codigoBarras || "-"}
                                 </TableCell>
 
                                 <TableCell>
